@@ -21,7 +21,7 @@ with st.expander("Advanced Settings"):
 
     stopwords_input = st.text_area(
         "Stopwords (comma separated)",
-        "και,να,το,η,της,την,των,σε,με,για,που,από,στο,στη,στον,οι,ο,τα,τι,ως,είναι,δεν,θα,ή,του,μια,ένα,τους,στην,όπως"
+        "και,να,το,η,της,την,των,σε,με,για,που,από,στο,στη,στον,οι,ο,τα,τι,ως,είναι,δεν,θα,ή,του,μια,ένα,τους,στην,όπως,στις,έχει,αλλά"
     )
 
     policy_keywords_input = st.text_area(
@@ -139,10 +139,10 @@ def analyze(df):
 
     df["word_count"] = df["text"].str.split().apply(len)
 
-    mean_words = round(df["word_count"].mean(), 2)
-    median_words = int(df["word_count"].median())
-    max_words = int(df["word_count"].max())
-    std_words = round(df["word_count"].std(), 2)
+    mean_words = df["word_count"].mean()
+    median_words = df["word_count"].median()
+    max_words = df["word_count"].max()
+    std_words = df["word_count"].std()
 
     stopwords = set([w.strip() for w in stopwords_input.split(",")])
     words = []
@@ -167,10 +167,10 @@ def analyze(df):
         "total_comments": len(df),
         "campaign_share": campaign_share,
         "duplicate_templates": duplicate_templates,
-        "mean_words": mean_words,
-        "median_words": median_words,
-        "max_words": max_words,
-        "std_words": std_words,
+        "mean_words": round(mean_words,2),
+        "median_words": round(median_words,2),
+        "max_words": int(max_words),
+        "std_words": round(std_words,2),
         "top_words": top_words,
         "strict_layer": strict_layer
     }
@@ -212,6 +212,15 @@ if run_button and url_input:
     col2.metric("Campaign Share (%)", results["campaign_share"])
     col3.metric("Duplicate Templates", results["duplicate_templates"])
 
+    st.caption(
+        "Campaign Share: Percentage of comments that appear more than once "
+        "(exact textual duplicates). Indicates organized or template-based participation."
+    )
+
+    st.caption(
+        "Duplicate Templates: Number of distinct comment texts that were submitted multiple times."
+    )
+
     st.subheader("Text Statistics")
 
     c1, c2, c3, c4 = st.columns(4)
@@ -220,12 +229,17 @@ if run_button and url_input:
     c3.metric("Max words", results["max_words"])
     c4.metric("Std deviation", results["std_words"])
 
-    # Histogram
     st.subheader("Comment Length Distribution")
+
     fig, ax = plt.subplots()
     ax.hist(df["word_count"], bins=30)
+    ax.axvline(results["mean_words"], linestyle="--", label="Mean")
+    ax.axvline(results["median_words"], linestyle="--", label="Median")
+    ax.axvline(results["mean_words"] + results["std_words"], linestyle=":", label="+1 Std")
+    ax.axvline(results["mean_words"] - results["std_words"], linestyle=":", label="-1 Std")
     ax.set_xlabel("Number of words")
     ax.set_ylabel("Number of comments")
+    ax.legend()
     st.pyplot(fig)
 
     st.subheader("Top Words")
@@ -235,8 +249,7 @@ if run_button and url_input:
     st.metric("Article reference + Amendment verb (%)", results["strict_layer"])
     st.caption(
         "Percentage of comments that contain both a legislative article reference "
-        "and a proposal for amendment (e.g. 'να προστεθεί', 'να διαγραφεί'). "
-        "This approximates targeted legislative input."
+        "and a proposal for amendment. This approximates targeted legislative input."
     )
 
     st.subheader("Method & Configuration")
