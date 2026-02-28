@@ -20,7 +20,7 @@ with st.expander("Advanced Settings"):
 
     stopwords_input = st.text_area(
         "Stopwords (comma separated)",
-        "και,να,το,η,της,την,των,σε,με,για,που,από,στο,στη,στον,οι,ο,τα,τι,ως,είναι,δεν,θα,ή,του,μια,ένα"
+        "και,να,το,η,της,την,των,σε,με,για,που,από,στο,στη,στον,οι,ο,τα,τι,ως,είναι,δεν,θα,ή,του,μια,ένα,τους,στην"
     )
 
     policy_keywords_input = st.text_area(
@@ -33,15 +33,11 @@ with st.expander("Advanced Settings"):
         "να προστεθ,να διαγραφ,να αντικατασταθ,να τροποποιηθ"
     )
 
-    short_threshold = st.number_input("Short comment word threshold", value=20)
-    long_threshold = st.number_input("Long comment word threshold", value=500)
-
 # ---------------------------
 # INPUT
 # ---------------------------
 
 url_input = st.text_input("Enter consultation URL or parent ID")
-
 run_button = st.button("Run Analysis")
 
 # ---------------------------
@@ -66,17 +62,38 @@ def get_chapter_pids(parent_id):
     return sorted(pids)
 
 
-@st.cache_data(ttl=900)  # 15 minute cache
+@st.cache_data(ttl=900)
 def scrape_consultation(parent_id):
+
     base = "https://www.opengov.gr/minenv/"
     all_rows = []
 
     chapter_pids = get_chapter_pids(parent_id)
+    max_pages = 300
 
-    max_pages = 300  # hard safety limit
+    return all_rows, chapter_pids  # placeholder for cache
+
+
+def run_scraping(parent_id):
+
+    base = "https://www.opengov.gr/minenv/"
+    all_rows = []
+
+    chapter_pids = get_chapter_pids(parent_id)
+    max_pages = 300
+
+    progress = st.progress(0)
+    status = st.empty()
+
+    total_steps = len(chapter_pids)
+    current_step = 0
 
     for pid in chapter_pids:
+        current_step += 1
+        status.write(f"Scraping chapter {current_step}/{total_steps} (p={pid})")
+
         prev_first = None
+
         for cpage in range(1, max_pages):
             url = f"{base}?p={pid}&cpage={cpage}#comments"
             r = requests.get(url)
@@ -107,7 +124,12 @@ def scrape_consultation(parent_id):
                     "text": text
                 })
 
-            time.sleep(0.3)
+            time.sleep(0.2)
+
+        progress.progress(current_step / total_steps)
+
+    progress.empty()
+    status.empty()
 
     return pd.DataFrame(all_rows), chapter_pids
 
@@ -120,14 +142,12 @@ def analyze(df):
 
     df["text_clean"] = df["text"].str.strip().str.lower()
 
-    # Duplicate detection
     dup_counts = df["text_clean"].value_counts()
     df["dup_size"] = df["text_clean"].map(dup_counts)
 
     campaign_share = round((df["dup_size"] > 1).mean() * 100, 2)
     duplicate_templates = int((dup_counts > 1).sum())
 
-    # Length
     df["word_count"] = df["text"].str.split().apply(len)
 
     mean_words = round(df["word_count"].mean(), 2)
@@ -135,7 +155,6 @@ def analyze(df):
     max_words = int(df["word_count"].max())
     std_words = round(df["word_count"].std(), 2)
 
-    # Top words
     stopwords = set([w.strip() for w in stopwords_input.split(",")])
     words = []
 
@@ -147,18 +166,16 @@ def analyze(df):
 
     top_words = Counter(words).most_common(15)
 
-    # Policy detection
     policy_patterns = [w.strip() for w in policy_keywords_input.split(",")]
     amend_patterns = [w.strip() for w in amendment_keywords_input.split(",")]
 
     df["mentions_article"] = df["text_clean"].str.contains("|".join(policy_patterns), regex=True)
     df["mentions_amendment"] = df["text_clean"].str.contains("|".join(amend_patterns), regex=True)
 
-    strict_layer = (df["mentions_article"] & df["mentions_amendment"]).mean() * 100
+    strict_layer = round((df["mentions_article"] & df["mentions_amendment"]).mean() * 100, 2)
 
     return {
         "total_comments": len(df),
-        "unique_comments": df["comment_id"].nunique(),
         "campaign_share": campaign_share,
         "duplicate_templates": duplicate_templates,
         "mean_words": mean_words,
@@ -166,7 +183,7 @@ def analyze(df):
         "max_words": max_words,
         "std_words": std_words,
         "top_words": top_words,
-        "strict_layer": round(strict_layer, 2)
+        "strict_layer": strict_layer
     }
 
 
@@ -176,12 +193,10 @@ def analyze(df):
 
 if run_button and url_input:
 
-    # Whitelist protection
     if "opengov.gr" not in url_input and not url_input.isdigit():
         st.error("Only opengov.gr consultations or valid parent IDs are allowed.")
         st.stop()
 
-    # Extract parent ID
     if "opengov.gr" in url_input:
         match = re.search(r"\?p=(\d+)", url_input)
         if match:
@@ -192,8 +207,8 @@ if run_button and url_input:
     else:
         parent_id = url_input
 
-    with st.spinner("Scraping and analyzing consultation... please wait."):
-        df, chapters = scrape_consultation(parent_id)
+    with st.spinner("Scraping and analyzing consultation..."):
+        df, chapters = run_scraping(parent_id)
 
         if df.empty:
             st.error("No comments detected.")
@@ -204,24 +219,23 @@ if run_button and url_input:
     st.success("Analysis completed.")
 
     col1, col2, col3 = st.columns(3)
-
     col1.metric("Total Comments", results["total_comments"])
     col2.metric("Campaign Share (%)", results["campaign_share"])
     col3.metric("Duplicate Templates", results["duplicate_templates"])
 
     st.subheader("Text Statistics")
-    st.write({
-        "Mean words": results["mean_words"],
-        "Median words": results["median_words"],
-        "Max words": results["max_words"],
-        "Std deviation": results["std_words"]
-    })
+
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Mean words", results["mean_words"])
+    c2.metric("Median words", results["median_words"])
+    c3.metric("Max words", results["max_words"])
+    c4.metric("Std deviation", results["std_words"])
 
     st.subheader("Top Words")
     st.write(results["top_words"])
 
     st.subheader("Strict Legislative Layer (%)")
-    st.write(results["strict_layer"])
+    st.metric("Article + Amendment", results["strict_layer"])
 
     st.subheader("Transparency")
     st.write({
