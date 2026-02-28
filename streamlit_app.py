@@ -13,7 +13,7 @@ st.title("Public Consultation Analyzer")
 st.markdown("Rule-based transparency tool for consultation analysis.")
 
 # ---------------------------
-# CONFIG PANEL
+# ADVANCED SETTINGS
 # ---------------------------
 
 with st.expander("Advanced Settings"):
@@ -66,15 +66,18 @@ def get_chapter_pids(parent_id):
     return sorted(pids)
 
 
+@st.cache_data(ttl=900)  # 15 minute cache
 def scrape_consultation(parent_id):
     base = "https://www.opengov.gr/minenv/"
     all_rows = []
 
     chapter_pids = get_chapter_pids(parent_id)
 
+    max_pages = 300  # hard safety limit
+
     for pid in chapter_pids:
         prev_first = None
-        for cpage in range(1, 2000):
+        for cpage in range(1, max_pages):
             url = f"{base}?p={pid}&cpage={cpage}#comments"
             r = requests.get(url)
             soup = BeautifulSoup(r.text, "html5lib")
@@ -173,6 +176,12 @@ def analyze(df):
 
 if run_button and url_input:
 
+    # Whitelist protection
+    if "opengov.gr" not in url_input and not url_input.isdigit():
+        st.error("Only opengov.gr consultations or valid parent IDs are allowed.")
+        st.stop()
+
+    # Extract parent ID
     if "opengov.gr" in url_input:
         match = re.search(r"\?p=(\d+)", url_input)
         if match:
@@ -183,15 +192,14 @@ if run_button and url_input:
     else:
         parent_id = url_input
 
-    st.info("Scraping consultation... please wait.")
+    with st.spinner("Scraping and analyzing consultation... please wait."):
+        df, chapters = scrape_consultation(parent_id)
 
-    df, chapters = scrape_consultation(parent_id)
+        if df.empty:
+            st.error("No comments detected.")
+            st.stop()
 
-    if df.empty:
-        st.error("No comments detected.")
-        st.stop()
-
-    results = analyze(df)
+        results = analyze(df)
 
     st.success("Analysis completed.")
 
