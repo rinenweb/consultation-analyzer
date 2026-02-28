@@ -6,6 +6,7 @@ import numpy as np
 import re
 from collections import Counter
 import time
+import matplotlib.pyplot as plt
 
 st.set_page_config(page_title="Consultation Analyzer", layout="wide")
 
@@ -20,7 +21,7 @@ with st.expander("Advanced Settings"):
 
     stopwords_input = st.text_area(
         "Stopwords (comma separated)",
-        "και,να,το,η,της,την,των,σε,με,για,που,από,στο,στη,στον,οι,ο,τα,τι,ως,είναι,δεν,θα,ή,του,μια,ένα,τους,στην"
+        "και,να,το,η,της,την,των,σε,με,για,που,από,στο,στη,στον,οι,ο,τα,τι,ως,είναι,δεν,θα,ή,του,μια,ένα,τους,στην,όπως"
     )
 
     policy_keywords_input = st.text_area(
@@ -60,18 +61,6 @@ def get_chapter_pids(parent_id):
                 pids.append(int(match.group(1)))
 
     return sorted(pids)
-
-
-@st.cache_data(ttl=900)
-def scrape_consultation(parent_id):
-
-    base = "https://www.opengov.gr/minenv/"
-    all_rows = []
-
-    chapter_pids = get_chapter_pids(parent_id)
-    max_pages = 300
-
-    return all_rows, chapter_pids  # placeholder for cache
 
 
 def run_scraping(parent_id):
@@ -174,7 +163,7 @@ def analyze(df):
 
     strict_layer = round((df["mentions_article"] & df["mentions_amendment"]).mean() * 100, 2)
 
-    return {
+    return df, {
         "total_comments": len(df),
         "campaign_share": campaign_share,
         "duplicate_templates": duplicate_templates,
@@ -214,7 +203,7 @@ if run_button and url_input:
             st.error("No comments detected.")
             st.stop()
 
-        results = analyze(df)
+        df, results = analyze(df)
 
     st.success("Analysis completed.")
 
@@ -231,17 +220,28 @@ if run_button and url_input:
     c3.metric("Max words", results["max_words"])
     c4.metric("Std deviation", results["std_words"])
 
+    # Histogram
+    st.subheader("Comment Length Distribution")
+    fig, ax = plt.subplots()
+    ax.hist(df["word_count"], bins=30)
+    ax.set_xlabel("Number of words")
+    ax.set_ylabel("Number of comments")
+    st.pyplot(fig)
+
     st.subheader("Top Words")
     st.write(results["top_words"])
 
-    st.subheader("Strict Legislative Layer (%)")
-    st.metric("Article + Amendment", results["strict_layer"])
+    st.subheader("Strict Legislative Layer")
+    st.metric("Article reference + Amendment verb (%)", results["strict_layer"])
+    st.caption(
+        "Percentage of comments that contain both a legislative article reference "
+        "and a proposal for amendment (e.g. 'να προστεθεί', 'να διαγραφεί'). "
+        "This approximates targeted legislative input."
+    )
 
-    st.subheader("Transparency")
-    st.write({
-        "Chapters detected": chapters,
-        "Stopwords used": stopwords_input,
-        "Policy keywords": policy_keywords_input,
-        "Amendment verbs": amendment_keywords_input,
-        "Timestamp": str(pd.Timestamp.now())
-    })
+    st.subheader("Method & Configuration")
+    st.write("Detected chapters:", chapters)
+    st.write("Stopwords used:", stopwords_input)
+    st.write("Policy keywords:", policy_keywords_input)
+    st.write("Amendment verbs:", amendment_keywords_input)
+    st.write("Run timestamp:", str(pd.Timestamp.now()))
