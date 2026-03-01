@@ -13,12 +13,11 @@ from translations import TRANSLATIONS
 st.set_page_config(page_title="Consultation Analyzer", layout="wide")
 
 # ---------------------------
-# LANGUAGE SWITCH (FLAGS TOP RIGHT)
+# LANGUAGE SWITCH (FLAGS)
 # ---------------------------
 
-top_left, top_right = st.columns([10,1])
-
-with top_right:
+col_left, col_right = st.columns([10,1])
+with col_right:
     lang_flag = st.radio("", ["🇬🇧", "🇬🇷"], horizontal=True, label_visibility="collapsed")
 
 lang = "en" if lang_flag == "🇬🇧" else "el"
@@ -36,9 +35,10 @@ st.markdown(T["subtitle"])
 # ---------------------------
 
 url_input = st.text_input(T["input_label"])
+run_button = st.button(T["run"])
 
 # ---------------------------
-# ADVANCED SETTINGS (UNDER INPUT)
+# ADVANCED SETTINGS
 # ---------------------------
 
 with st.expander(T["advanced"]):
@@ -57,37 +57,44 @@ with st.expander(T["advanced"]):
         T["amend"],
         "να προστεθ,να διαγραφ,να αντικατασταθ,να τροποποιηθ"
     )
-run_button = st.button(T["run"])
+
 # ---------------------------
 # SCRAPER
 # ---------------------------
 
-def get_chapter_pids(parent_id):
+def get_chapters(parent_id):
     base = "https://www.opengov.gr/minenv/"
     url = f"{base}?p={parent_id}"
     r = requests.get(url)
     soup = BeautifulSoup(r.text, "html5lib")
+
     nav_ul = soup.find("ul", class_="other_posts")
-    pids = []
+    chapters = []
+
     if nav_ul:
         for a in nav_ul.find_all("a", class_="list_comments_link", href=True):
             match = re.search(r"\?p=(\d+)", a["href"])
             if match:
-                pids.append(int(match.group(1)))
-    return sorted(pids)
+                pid = int(match.group(1))
+                title = a.get("title", "")
+                chapters.append({"pid": pid, "title": title})
+
+    return chapters
 
 
 def run_scraping(parent_id):
+
     base = "https://www.opengov.gr/minenv/"
     all_rows = []
-    chapter_pids = get_chapter_pids(parent_id)
+    chapters = get_chapters(parent_id)
     max_pages = 300
 
     progress = st.progress(0)
     status = st.empty()
 
-    for i, pid in enumerate(chapter_pids):
-        status.write(f"Scraping chapter {i+1}/{len(chapter_pids)} (p={pid})")
+    for i, ch in enumerate(chapters):
+        pid = ch["pid"]
+        status.write(f"Scraping chapter {i+1}/{len(chapters)} (p={pid})")
         prev_first = None
 
         for cpage in range(1, max_pages):
@@ -119,42 +126,12 @@ def run_scraping(parent_id):
 
             time.sleep(0.2)
 
-        progress.progress((i+1)/len(chapter_pids))
+        progress.progress((i+1)/len(chapters))
 
     progress.empty()
     status.empty()
-    return pd.DataFrame(all_rows), chapter_pids
 
-
-# ---------------------------
-# ANALYSIS
-# ---------------------------
-
-def analyze(df):
-
-    df["text_clean"] = df["text"].str.strip().str.lower()
-
-    dup_counts = df["text_clean"].value_counts()
-    df["dup_size"] = df["text_clean"].map(dup_counts)
-
-    df["word_count"] = df["text"].str.split().apply(len)
-
-    stopwords = set([w.strip() for w in stopwords_input.split(",")])
-    words = []
-
-    for text in df["text_clean"]:
-        clean = re.sub(r"[^α-ωάέήίόύώϊϋΐΰa-z\s]", " ", text)
-        for w in clean.split():
-            if w not in stopwords and len(w) > 3:
-                words.append(w)
-
-    policy_patterns = [w.strip() for w in policy_keywords_input.split(",")]
-    amend_patterns = [w.strip() for w in amendment_keywords_input.split(",")]
-
-    df["mentions_article"] = df["text_clean"].str.contains("|".join(policy_patterns), regex=True)
-    df["mentions_amendment"] = df["text_clean"].str.contains("|".join(amend_patterns), regex=True)
-
-    return df
+    return pd.DataFrame(all_rows), chapters
 
 
 # ---------------------------
@@ -171,21 +148,38 @@ if run_button and url_input:
 
     with st.spinner(T["scraping"]):
         df, chapters = run_scraping(parent_id)
-        df = analyze(df)
 
     st.success(T["completed"])
 
-    campaign_share = round((df["dup_size"] > 1).mean()*100, 2)
-    duplicate_templates = int((df["dup_size"] > 1).sum())
+    df["text_clean"] = df["text"].str.strip().str.lower()
+    dup_counts = df["text_clean"].value_counts()
+    df["dup_size"] = df["text_clean"].map(dup_counts)
+    df["word_count"] = df["text"].str.split().apply(len)
 
+    campaign_share = round((df["dup_size"] > 1).mean()*100,2)
+    duplicate_templates = int((dup_counts > 1).sum())
+
+    # Metrics
     col1, col2, col3 = st.columns(3)
-    col1.metric(T["total"], len(df))
-    col2.metric(T["campaign"], campaign_share)
-    col3.metric(T["templates"], duplicate_templates)
 
-    st.caption(T["campaign_desc"])
-    st.caption(T["templates_desc"])
+    col1.metric(
+        T["total"],
+        len(df)
+    )
 
+    col2.metric(
+        T["campaign"],
+        campaign_share,
+        help=T["campaign_help"]
+    )
+
+    col3.metric(
+        T["templates"],
+        duplicate_templates,
+        help=T["templates_help"]
+    )
+
+    # Statistics
     st.subheader(T["stats"])
 
     mean = df["word_count"].mean()
@@ -193,10 +187,11 @@ if run_button and url_input:
     std = df["word_count"].std()
 
     c1, c2, c3 = st.columns(3)
-    c1.metric(T["mean"], round(mean,2))
-    c2.metric(T["median"], round(median,2))
-    c3.metric(T["std"], round(std,2))
+    c1.metric(T["mean"], round(mean,2), help=T["mean_help"])
+    c2.metric(T["median"], round(median,2), help=T["median_help"])
+    c3.metric(T["std"], round(std,2), help=T["std_help"])
 
+    # KDE Plot
     st.subheader(T["distribution"])
 
     kde = gaussian_kde(df["word_count"])
@@ -204,12 +199,39 @@ if run_button and url_input:
     y = kde(x)
 
     fig, ax = plt.subplots()
-    ax.plot(x, y)
-    ax.axvline(mean, linestyle="--")
-    ax.axvline(median, linestyle=":")
+    ax.plot(x, y, label="Density")
+    ax.axvline(mean, linestyle="--", label="Mean")
+    ax.axvline(median, linestyle=":", label="Median")
+    ax.legend()
     st.pyplot(fig)
 
-    st.subheader(T["method"])
-    st.write(pd.DataFrame({"Chapter IDs": chapters}))
-    st.write(T["timestamp"] + ":", str(pd.Timestamp.now()))
+    # ---------------------------
+    # METHODOLOGICAL PANEL
+    # ---------------------------
 
+    with st.expander(T["method_panel"], expanded=False):
+
+        st.markdown("### " + T["execution_summary"])
+
+        chapter_counts = df.groupby("chapter_p").size().reset_index(name="Comment Count")
+        chapter_df = pd.merge(
+            pd.DataFrame(chapters),
+            chapter_counts,
+            left_on="pid",
+            right_on="chapter_p",
+            how="left"
+        ).fillna(0)
+
+        chapter_df = chapter_df[["pid", "title", "Comment Count"]]
+        chapter_df.columns = T["chapter_table_headers"]
+
+        st.dataframe(chapter_df, use_container_width=True)
+
+        st.markdown("### " + T["metric_definitions"])
+        st.markdown(T["definitions_text"])
+
+        st.markdown("### " + T["active_configuration"])
+        st.write("Stopwords:", stopwords_input)
+        st.write("Policy keywords:", policy_keywords_input)
+        st.write("Amendment verbs:", amendment_keywords_input)
+        st.write(T["timestamp"] + ":", str(pd.Timestamp.now()))
