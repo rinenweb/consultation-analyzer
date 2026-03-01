@@ -69,6 +69,20 @@ TRANSLATIONS = {
         "active_configuration": "Active Configuration",
         "timestamp": "Run timestamp",
 
+        # --- Footer / Disclaimer ---
+        "disclaimer_text": (
+        "This application is a work in progress developed within the "
+        "Postgraduate Programme «e-Government» of the University of the Aegean. "
+        "It aims to extract and analyze comments submitted to public consultations "
+        "on opengov.gr."
+        ),
+    
+        "methodology_note": (
+        "The analysis is fully rule-based and methodologically transparent. "
+        "Metrics are calculated using predefined textual patterns and similarity thresholds."
+        ),
+        "developed_by": "Developed with ❤️ by"
+
         "chapter_table_headers": [
             "Chapter ID",
             "Chapter Title",
@@ -146,6 +160,23 @@ TRANSLATIONS = {
         "execution_summary": "Σύνοψη Εκτέλεσης",
         "active_configuration": "Ενεργές Ρυθμίσεις",
         "timestamp": "Χρόνος Εκτέλεσης",
+
+        # --- Footer / Disclaimer ---
+        "disclaimer_text": (
+            "Το παρόν εργαλείο αποτελεί work in progress στο πλαίσιο του "
+            "Μεταπτυχιακού Προγράμματος «Ηλεκτρονική Διακυβέρνηση» "
+            "του Πανεπιστημίου Αιγαίου και αποσκοπεί στην εξαγωγή και "
+            "ανάλυση σχολίων που υποβάλλονται σε δημόσιες διαβουλεύσεις "
+            "στο opengov.gr."
+        ),
+        
+        "methodology_note": (
+            "Η ανάλυση είναι πλήρως βασισμένη σε κανόνες και μεθοδολογικά διαφανής. "
+            "Οι μετρικές υπολογίζονται βάσει προκαθορισμένων γλωσσικών προτύπων "
+            "και κατωφλίων ομοιότητας."
+        ),
+        
+        "developed_by": "Developed with ❤️ by"
 
         "chapter_table_headers": [
             "ID Κεφαλαίου",
