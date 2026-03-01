@@ -233,6 +233,10 @@ if run_button and url_input:
     if time.time() - start < 0.5:
         st.info(T["loaded_cache"])
 
+    if df.empty:
+        st.warning("No comments found or scraping aborted.")
+        st.stop()
+    
     st.success(T["completed"])
 
     # ================= ANALYSIS =================
@@ -331,3 +335,4 @@ if st.session_state.results:
     ax.legend()
 
     st.pyplot(fig)
+
