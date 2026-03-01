@@ -591,6 +591,7 @@ st.markdown(
     <div style="text-align: center; font-size: 0.85rem; opacity: 0.8; max-width: 800px; margin: auto;">
         <p>{T["disclaimer_text"]}</p>
         <p style="margin-top: 6px;">{T["methodology_note"]}</p>
+        <p style="margin-top: 6px;">{T["code_available"]}</p>
     </div>
     """,
     unsafe_allow_html=True
@@ -602,7 +603,7 @@ st.markdown(
         {T["developed_by"]} 
         <a href="https://www.rinenweb.eu/" target="_blank" title="Rinenweb Development">
             <img style="padding-bottom: 5px; margin-left: 6px;"
-                 src="https://www.rinenweb.eu/images/rinenweb-logo-color.png"
+                 src="https://www.rinenweb.eu/images/rinenweb-logo-color-sm.png"
                  alt="Rinenweb Logo"
                  width="100"
                  height="25">
@@ -611,3 +612,4 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
