@@ -12,9 +12,9 @@ from translations import TRANSLATIONS
 
 st.set_page_config(page_title="Consultation Analyzer", layout="wide")
 
-# --------------------------
+# =========================================================
 # SESSION STATE
-# --------------------------
+# =========================================================
 
 if "abort" not in st.session_state:
     st.session_state.abort = False
@@ -22,9 +22,9 @@ if "abort" not in st.session_state:
 if "results" not in st.session_state:
     st.session_state.results = None
 
-# --------------------------
+# =========================================================
 # LANGUAGE
-# --------------------------
+# =========================================================
 
 col_left, col_right = st.columns([10,1])
 with col_right:
@@ -38,14 +38,21 @@ st.markdown(T["subtitle"])
 
 url_input = st.text_input(T["input_label"])
 
-# --------------------------
-# ADVANCED
-# --------------------------
+# =========================================================
+# ADVANCED SETTINGS
+# =========================================================
 
 with st.expander(T["advanced"]):
 
-    policy_keywords_input = st.text_area(T["policy"], "άρθρ,συνταγμ,οδηγ,ευρωπαϊκ,εε,ενωσιακ")
-    amendment_keywords_input = st.text_area(T["amend"], "να προστεθ,να διαγραφ,να αντικατασταθ,να τροποποιηθ")
+    policy_keywords_input = st.text_area(
+        T["policy"],
+        "άρθρ,συνταγμ,οδηγ,ευρωπαϊκ,εε,ενωσιακ"
+    )
+
+    amendment_keywords_input = st.text_area(
+        T["amend"],
+        "να προστεθ,να διαγραφ,να αντικατασταθ,να τροποποιηθ"
+    )
 
     duplicate_method = st.radio(
         T["duplicate_method_label"],
@@ -56,15 +63,18 @@ with st.expander(T["advanced"]):
 
     similarity_threshold = 90
     if duplicate_method == T["fuzzy_match"]:
-        similarity_threshold = st.slider(T["similarity_threshold"], 80, 100, 90)
+        similarity_threshold = st.slider(
+            T["similarity_threshold"],
+            80, 100, 90
+        )
 
 run_button = st.button(T["run"])
 
-# --------------------------
-# SCRAPING
-# --------------------------
-
 BASE = "https://www.opengov.gr/minenv/"
+
+# =========================================================
+# SCRAPING
+# =========================================================
 
 def get_chapters(parent_id):
     r = requests.get(f"{BASE}?p={parent_id}")
@@ -77,9 +87,10 @@ def get_chapters(parent_id):
             if match:
                 chapters.append({
                     "pid": int(match.group(1)),
-                    "title": a.get("title","")
+                    "title": a.get("title", "")
                 })
     return chapters
+
 
 def run_scraping(parent_id):
 
@@ -93,7 +104,8 @@ def run_scraping(parent_id):
     for i, ch in enumerate(chapters):
 
         if st.session_state.abort:
-            progress.empty(); status.empty()
+            progress.empty()
+            status.empty()
             return pd.DataFrame(), chapters
 
         pid = ch["pid"]
@@ -103,7 +115,8 @@ def run_scraping(parent_id):
         for cpage in range(1, max_pages):
 
             if st.session_state.abort:
-                progress.empty(); status.empty()
+                progress.empty()
+                status.empty()
                 return pd.DataFrame(), chapters
 
             r = requests.get(f"{BASE}?p={pid}&cpage={cpage}#comments")
@@ -134,23 +147,25 @@ def run_scraping(parent_id):
 
         progress.progress((i+1)/len(chapters))
 
-    progress.empty(); status.empty()
+    progress.empty()
+    status.empty()
     return pd.DataFrame(rows), chapters
+
 
 @st.cache_data(ttl=600, show_spinner=False)
 def run_scraping_cached(parent_id):
     return run_scraping(parent_id)
 
-# --------------------------
+# =========================================================
 # OPTIMIZED FUZZY
-# --------------------------
+# =========================================================
 
 def optimized_fuzzy_groups(df, threshold):
 
     texts = df["text_clean"].tolist()
     buckets = {}
 
-    # bucket by first 40 chars
+    # bucket by first 40 characters
     for idx, text in enumerate(texts):
         key = text[:40]
         buckets.setdefault(key, []).append(idx)
@@ -189,13 +204,17 @@ def optimized_fuzzy_groups(df, threshold):
 
     return group_sizes, group_ids
 
-# --------------------------
+# =========================================================
 # RUN
-# --------------------------
+# =========================================================
 
 if run_button and url_input:
 
     st.session_state.abort = False
+
+    if "opengov.gr" not in url_input and not url_input.isdigit():
+        st.error("Only opengov.gr consultations or valid parent IDs are allowed.")
+        st.stop()
 
     parent_id = re.search(r"\?p=(\d+)", url_input).group(1) if "opengov.gr" in url_input else url_input
 
@@ -206,14 +225,17 @@ if run_button and url_input:
             st.stop()
 
     start = time.time()
+
     with col_spin:
         with st.spinner(T["scraping"]):
             df, chapters = run_scraping_cached(parent_id)
 
-    if time.time()-start < 0.5:
+    if time.time() - start < 0.5:
         st.info(T["loaded_cache"])
 
-    # ---------------- ANALYSIS ----------------
+    st.success(T["completed"])
+
+    # ================= ANALYSIS =================
 
     df["text_clean"] = df["text"].str.strip().str.lower()
     df["word_count"] = df["text"].str.split().apply(len)
@@ -224,7 +246,9 @@ if run_button and url_input:
         template_groups = dup_counts[dup_counts>1]
         template_ids = {}
     else:
-        template_groups, template_ids = optimized_fuzzy_groups(df, similarity_threshold/100)
+        template_groups, template_ids = optimized_fuzzy_groups(
+            df, similarity_threshold/100
+        )
         template_groups = pd.Series(template_groups)
 
     campaign_share = round((df["dup_size"]>1).mean()*100,2)
@@ -235,7 +259,9 @@ if run_button and url_input:
     df["mentions_article"] = df["text_clean"].str.contains("|".join(policy_patterns), regex=True)
     df["mentions_amendment"] = df["text_clean"].str.contains("|".join(amend_patterns), regex=True)
 
-    strict_layer = round((df["mentions_article"] & df["mentions_amendment"]).mean()*100,2)
+    strict_layer = round(
+        (df["mentions_article"] & df["mentions_amendment"]).mean()*100,2
+    )
 
     mean = df["word_count"].mean()
     median = df["word_count"].median()
@@ -253,38 +279,55 @@ if run_button and url_input:
         "template_ids": template_ids
     }
 
-# --------------------------
+# =========================================================
 # DISPLAY
-# --------------------------
+# =========================================================
 
 if st.session_state.results:
 
     R = st.session_state.results
     df = R["df"]
 
-    col1,col2,col3 = st.columns(3)
-    col1.metric(T["campaign"], R["campaign_share"])
-    col2.metric(T["strict"], R["strict_layer"])
-    col3.metric(T["mean"], round(R["mean"],2))
+    col1, col2, col3 = st.columns(3)
+    col1.metric(T["campaign"], R["campaign_share"], help=T["campaign_help"])
+    col2.metric(T["strict"], R["strict_layer"], help=T["strict_desc"])
+    col3.metric(T["mean"], round(R["mean"],2), help=T["mean_help"])
 
-    if len(R["template_groups"])>0:
+    # -------- Templates --------
+
+    if len(R["template_groups"]) > 0:
         with st.expander(T["top_templates"]):
+
             top = R["template_groups"].sort_values(ascending=False).head(5)
+
             for idx,count in top.items():
                 text = df.loc[int(idx),"text"]
                 st.markdown(f"**{T['occurrences']}: {count}**")
-                st.write(text[:400]+"...")
-                ids = R["template_ids"].get(idx,[])[:10]
-                links = [f"[{cid}]({BASE}?c={cid})" for cid in ids]
-                st.markdown(" ".join(links))
+                preview = text[:400] + ("..." if len(text)>400 else "")
+                st.write(preview)
+
+                with st.expander(T["show_full_text"]):
+                    st.write(text)
+
+                    ids = R["template_ids"].get(idx,[])[:10]
+                    links = [f"[{cid}]({BASE}?c={cid})" for cid in ids]
+                    st.markdown(" ".join(links))
+
                 st.markdown("---")
 
+    # -------- KDE --------
+
     st.subheader(T["distribution"])
-    fig,ax = plt.subplots(figsize=(10,4))
+
+    fig, ax = plt.subplots(figsize=(10,4))
     kde = gaussian_kde(df["word_count"])
     x = np.linspace(df["word_count"].min(),df["word_count"].max(),500)
     y = kde(x)
-    ax.plot(x,y)
-    ax.axvline(R["mean"],linestyle="--")
-    ax.axvline(R["median"],linestyle=":")
+
+    ax.plot(x,y, label=T["density"])
+    ax.axvline(R["mean"], linestyle="--", label=T["mean_line"])
+    ax.axvline(R["median"], linestyle=":", label=T["median_line"])
+    ax.set_xlabel(T["word_count_label"])
+    ax.legend()
+
     st.pyplot(fig)
