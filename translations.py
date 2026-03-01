@@ -81,7 +81,12 @@ TRANSLATIONS = {
         "The analysis is fully rule-based and methodologically transparent. "
         "Metrics are calculated using predefined textual patterns and similarity thresholds."
         ),
-        "developed_by": "Developed with ❤️ by"
+        "developed_by": "Developed with ❤️ by",
+
+        "code_available": (
+        "The source code is openly available at "
+        "<a href='https://github.com/rinenweb/consultation-analyzer/' target='_blank'>GitHub</a>."
+        ),
 
         "chapter_table_headers": [
             "Chapter ID",
@@ -176,7 +181,12 @@ TRANSLATIONS = {
             "και κατωφλίων ομοιότητας."
         ),
         
-        "developed_by": "Developed with ❤️ by"
+        "developed_by": "Developed with ❤️ by",
+
+        "code_available": (
+        "Ο πηγαίος κώδικας είναι δημόσια διαθέσιμος στο "
+        "<a href='https://github.com/rinenweb/consultation-analyzer/' target='_blank'>GitHub</a>."
+        ),
 
         "chapter_table_headers": [
             "ID Κεφαλαίου",
