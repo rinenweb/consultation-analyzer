@@ -494,9 +494,9 @@ if st.session_state.results:
         help=T.get("campaign_help", None)
     )
     c3.metric(
-        T.get("duplicate_templates", "Duplicate Templates"),
+        T["duplicate_templates"],
         R["duplicate_templates"],
-        help=T.get("duplicate_templates_help", None)
+        help=T["duplicate_templates_help"]
     )
     c4.metric(
         T.get("strict", "Strict Layer"),
@@ -700,5 +700,6 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
 
 
