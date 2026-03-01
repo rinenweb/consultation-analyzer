@@ -36,7 +36,6 @@ st.markdown(T["subtitle"])
 # ---------------------------
 
 url_input = st.text_input(T["input_label"])
-run_button = st.button(T["run"])
 
 # ---------------------------
 # ADVANCED SETTINGS (UNDER INPUT)
@@ -58,7 +57,7 @@ with st.expander(T["advanced"]):
         T["amend"],
         "να προστεθ,να διαγραφ,να αντικατασταθ,να τροποποιηθ"
     )
-
+run_button = st.button(T["run"])
 # ---------------------------
 # SCRAPER
 # ---------------------------
@@ -213,3 +212,4 @@ if run_button and url_input:
     st.subheader(T["method"])
     st.write(pd.DataFrame({"Chapter IDs": chapters}))
     st.write(T["timestamp"] + ":", str(pd.Timestamp.now()))
+
