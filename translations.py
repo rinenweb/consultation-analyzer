@@ -7,7 +7,7 @@ TRANSLATIONS = {
         "subtitle": "Rule-based transparency tool for consultation analysis.",
 
         # --- Input ---
-        "input_label": "Enter consultation URL or parent ID",
+        "input_label": "Enter consultation URL",
         "run": "Run Analysis",
 
         # --- Advanced ---
@@ -85,7 +85,7 @@ TRANSLATIONS = {
         "subtitle": "Εργαλείο διαφάνειας βασισμένο σε κανόνες.",
 
         # --- Input ---
-        "input_label": "Εισάγετε URL ή ID διαβούλευσης από το opengov.gr",
+        "input_label": "Εισάγετε URL διαβούλευσης από το opengov.gr",
         "run": "Εκτέλεση Ανάλυσης",
 
         # --- Advanced ---
