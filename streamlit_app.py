@@ -22,6 +22,9 @@ if "abort" not in st.session_state:
 if "results" not in st.session_state:
     st.session_state.results = None
 
+if "running" not in st.session_state:
+    st.session_state.running = False
+
 # =========================================================
 # LANGUAGE (FLAGS)
 # =========================================================
@@ -295,22 +298,31 @@ def optimized_fuzzy_groups(df: pd.DataFrame, threshold: float, step_status=None)
 # =========================================================
 
 if run_button and url_input:
+
     st.session_state.abort = False
+    st.session_state.running = True
     st.session_state.results = None
 
     base, parent_id = extract_base_and_parent(url_input)
     if not base:
         st.error(T.get("invalid_url", "Please provide a valid full opengov consultation URL."))
+        st.session_state.running = False
         st.stop()
 
-    # ABORT button row (visible during run only)
+    # --- Abort button (visible ONLY while running)
     col_run, col_abort = st.columns([10, 1])
     with col_abort:
         if st.button(T.get("abort", "Abort")):
             st.session_state.abort = True
+            st.session_state.running = False
+            st.warning(T.get("aborted_msg", "Aborted."))
             st.stop()
 
-    # Step-by-step panel
+    # --- Scraping message (will be cleared later)
+    scrape_msg = st.empty()
+    scrape_msg.info(T["scraping"])
+
+    # --- Step panel
     steps = [
         T.get("step_scrape", "Scraping chapters & comments"),
         T.get("step_normalize", "Normalizing text"),
@@ -319,24 +331,26 @@ if run_button and url_input:
         T.get("step_stats", "Computing statistics"),
         T.get("step_render", "Preparing outputs"),
     ]
+
     steps_ph = st.empty()
     done = set()
     active = 0
     render_steps(steps_ph, steps, active, done)
 
-    # --- STEP 1: SCRAPE (progress inside) ---
-    with col_run:
-        st.info(T["scraping"])
+    # ================= STEP 1: SCRAPE =================
 
     df, chapters = scrape_consultation_with_progress(parent_id, base)
 
     if st.session_state.abort:
+        scrape_msg.empty()
         steps_ph.empty()
-        st.warning(T.get("aborted_msg", "Aborted."))
+        st.session_state.running = False
         st.stop()
 
     if df.empty:
+        scrape_msg.empty()
         steps_ph.empty()
+        st.session_state.running = False
         st.warning(T.get("no_comments", "No comments found."))
         st.stop()
 
@@ -344,7 +358,8 @@ if run_button and url_input:
     active = 1
     render_steps(steps_ph, steps, active, done)
 
-    # --- STEP 2: NORMALIZE ---
+    # ================= STEP 2: NORMALIZE =================
+
     df["text_clean"] = df["text"].astype(str).str.strip().str.lower()
     df["word_count"] = df["text"].astype(str).str.split().apply(len)
 
@@ -352,20 +367,21 @@ if run_button and url_input:
     active = 2
     render_steps(steps_ph, steps, active, done)
 
-    # --- STEP 3: DUPLICATES ---
-    # status line for duplicates (optional)
+    # ================= STEP 3: DUPLICATES =================
+
     dup_status = st.empty()
 
-    template_ids = {}  # rep->ids (for fuzzy), text->ids (for exact)
+    template_ids = {}
+
     if duplicate_method == T["exact_match"]:
         dup_counts = df["text_clean"].value_counts()
         df["dup_size"] = df["text_clean"].map(dup_counts)
         template_groups = dup_counts[dup_counts > 1]
 
-        # map template text -> comment IDs (for transparency)
         for template_text in template_groups.index.tolist():
             ids = df.loc[df["text_clean"] == template_text, "comment_id"].astype(str).tolist()
             template_ids[template_text] = ids
+
     else:
         group_sizes, group_ids = optimized_fuzzy_groups(
             df,
@@ -378,18 +394,20 @@ if run_button and url_input:
     dup_status.empty()
 
     if st.session_state.abort:
+        scrape_msg.empty()
         steps_ph.empty()
-        st.warning(T.get("aborted_msg", "Aborted."))
+        st.session_state.running = False
         st.stop()
 
     campaign_share = round((df["dup_size"] > 1).mean() * 100, 2)
-    duplicate_templates = int((template_groups > 0).sum()) if isinstance(template_groups, pd.Series) else int(len(template_groups))
+    duplicate_templates = int(len(template_groups))
 
     done.add(2)
     active = 3
     render_steps(steps_ph, steps, active, done)
 
-    # --- STEP 4: STRICT LAYER ---
+    # ================= STEP 4: STRICT =================
+
     policy_patterns = [w.strip() for w in policy_keywords_input.split(",") if w.strip()]
     amend_patterns = [w.strip() for w in amendment_keywords_input.split(",") if w.strip()]
 
@@ -409,7 +427,8 @@ if run_button and url_input:
     active = 4
     render_steps(steps_ph, steps, active, done)
 
-    # --- STEP 5: TEXT STATS ---
+    # ================= STEP 5: STATS =================
+
     mean = float(df["word_count"].mean())
     median = float(df["word_count"].median())
     max_words = int(df["word_count"].max())
@@ -419,7 +438,8 @@ if run_button and url_input:
     active = 5
     render_steps(steps_ph, steps, active, done)
 
-    # --- STEP 6: PREP OUTPUTS (store results) ---
+    # ================= STORE RESULTS =================
+
     st.session_state.results = {
         "df": df,
         "chapters": chapters,
@@ -443,8 +463,14 @@ if run_button and url_input:
 
     done.add(5)
     render_steps(steps_ph, steps, active, done)
-    time.sleep(0.15)  # tiny UX pause
+
+    # ================= CLEAN UI =================
+
+    time.sleep(0.15)
+    scrape_msg.empty()
     steps_ph.empty()
+
+    st.session_state.running = False
 
     st.success(T.get("completed", "Analysis completed."))
 
@@ -553,3 +579,4 @@ if st.session_state.results:
         st.write(T.get("policy","Policy keywords") + ":", R["policy_keywords"])
         st.write(T.get("amend","Amendment verbs") + ":", R["amendment_keywords"])
         st.write(T.get("timestamp","Run timestamp") + ":", R["timestamp"])
+
