@@ -73,8 +73,44 @@ run_button = st.button(T["run"])
 BASE = "https://www.opengov.gr/minenv/"
 
 # =========================================================
-# SCRAPING
+# PURE SCRAPING (NO STREAMLIT HERE)
 # =========================================================
+
+def scrape_chapter(pid):
+
+    rows = []
+    max_pages = 300
+    prev_first = None
+
+    for cpage in range(1, max_pages):
+
+        r = requests.get(f"{BASE}?p={pid}&cpage={cpage}#comments")
+        soup = BeautifulSoup(r.text, "html5lib")
+        comments = soup.select("ul.comment_list > li.comment")
+
+        if not comments:
+            break
+
+        first_id = comments[0].get("id")
+        if first_id == prev_first:
+            break
+        prev_first = first_id
+
+        for li in comments:
+            cid = li.get("id","").replace("comment-","")
+            user_block = li.find("div", class_="user")
+            if user_block:
+                user_block.extract()
+            text = li.get_text("\n", strip=True)
+
+            rows.append({
+                "chapter_p": pid,
+                "comment_id": cid,
+                "text": text
+            })
+
+    return rows
+
 
 def get_chapters(parent_id):
     r = requests.get(f"{BASE}?p={parent_id}")
@@ -92,69 +128,17 @@ def get_chapters(parent_id):
     return chapters
 
 
-def run_scraping(parent_id):
+@st.cache_data(ttl=600)
+def scrape_consultation_cached(parent_id):
 
     chapters = get_chapters(parent_id)
-    rows = []
-    max_pages = 300
+    all_rows = []
 
-    progress = st.progress(0)
-    status = st.empty()
+    for ch in chapters:
+        rows = scrape_chapter(ch["pid"])
+        all_rows.extend(rows)
 
-    for i, ch in enumerate(chapters):
-
-        if st.session_state.abort:
-            progress.empty()
-            status.empty()
-            return pd.DataFrame(), chapters
-
-        pid = ch["pid"]
-        status.write(f"{T['scraping_chapter']} {i+1}/{len(chapters)} (p={pid})")
-
-        prev_first = None
-        for cpage in range(1, max_pages):
-
-            if st.session_state.abort:
-                progress.empty()
-                status.empty()
-                return pd.DataFrame(), chapters
-
-            r = requests.get(f"{BASE}?p={pid}&cpage={cpage}#comments")
-            soup = BeautifulSoup(r.text, "html5lib")
-            comments = soup.select("ul.comment_list > li.comment")
-
-            if not comments:
-                break
-
-            first_id = comments[0].get("id")
-            if first_id == prev_first:
-                break
-            prev_first = first_id
-
-            for li in comments:
-                cid = li.get("id","").replace("comment-","")
-                user_block = li.find("div", class_="user")
-                if user_block:
-                    user_block.extract()
-                text = li.get_text("\n", strip=True)
-                rows.append({
-                    "chapter_p": pid,
-                    "comment_id": cid,
-                    "text": text
-                })
-
-            time.sleep(0.15)
-
-        progress.progress((i+1)/len(chapters))
-
-    progress.empty()
-    status.empty()
-    return pd.DataFrame(rows), chapters
-
-
-@st.cache_data(ttl=600, show_spinner=False)
-def run_scraping_cached(parent_id):
-    return run_scraping(parent_id)
+    return pd.DataFrame(all_rows), chapters
 
 # =========================================================
 # OPTIMIZED FUZZY
@@ -165,7 +149,6 @@ def optimized_fuzzy_groups(df, threshold):
     texts = df["text_clean"].tolist()
     buckets = {}
 
-    # bucket by first 40 characters
     for idx, text in enumerate(texts):
         key = text[:40]
         buckets.setdefault(key, []).append(idx)
@@ -187,7 +170,6 @@ def optimized_fuzzy_groups(df, threshold):
 
                 t2 = texts[j]
 
-                # length ratio filter
                 if abs(len(t1)-len(t2))/max(len(t1),len(t2)) > 0.2:
                     continue
 
@@ -213,30 +195,18 @@ if run_button and url_input:
     st.session_state.abort = False
 
     if "opengov.gr" not in url_input and not url_input.isdigit():
-        st.error("Only opengov.gr consultations or valid parent IDs are allowed.")
+        st.error("Invalid consultation URL or ID.")
         st.stop()
 
     parent_id = re.search(r"\?p=(\d+)", url_input).group(1) if "opengov.gr" in url_input else url_input
 
-    col_spin, col_abort = st.columns([8,1])
-    with col_abort:
-        if st.button(T["abort"]):
-            st.session_state.abort = True
-            st.stop()
-
-    start = time.time()
-
-    with col_spin:
-        with st.spinner(T["scraping"]):
-            df, chapters = run_scraping_cached(parent_id)
-
-    if time.time() - start < 0.5:
-        st.info(T["loaded_cache"])
+    with st.spinner(T["scraping"]):
+        df, chapters = scrape_consultation_cached(parent_id)
 
     if df.empty:
-        st.warning("No comments found or scraping aborted.")
+        st.warning(T["no_comments"])
         st.stop()
-    
+
     st.success(T["completed"])
 
     # ================= ANALYSIS =================
@@ -297,42 +267,24 @@ if st.session_state.results:
     col2.metric(T["strict"], R["strict_layer"], help=T["strict_desc"])
     col3.metric(T["mean"], round(R["mean"],2), help=T["mean_help"])
 
-    # -------- Templates --------
-
     if len(R["template_groups"]) > 0:
         with st.expander(T["top_templates"]):
-
             top = R["template_groups"].sort_values(ascending=False).head(5)
-
             for idx,count in top.items():
                 text = df.loc[int(idx),"text"]
                 st.markdown(f"**{T['occurrences']}: {count}**")
-                preview = text[:400] + ("..." if len(text)>400 else "")
-                st.write(preview)
-
-                with st.expander(T["show_full_text"]):
-                    st.write(text)
-
-                    ids = R["template_ids"].get(idx,[])[:10]
-                    links = [f"[{cid}]({BASE}?c={cid})" for cid in ids]
-                    st.markdown(" ".join(links))
-
+                st.write(text[:400]+"...")
                 st.markdown("---")
 
-    # -------- KDE --------
-
-    st.subheader(T["distribution"])
-
-    fig, ax = plt.subplots(figsize=(10,4))
-    kde = gaussian_kde(df["word_count"])
-    x = np.linspace(df["word_count"].min(),df["word_count"].max(),500)
-    y = kde(x)
-
-    ax.plot(x,y, label=T["density"])
-    ax.axvline(R["mean"], linestyle="--", label=T["mean_line"])
-    ax.axvline(R["median"], linestyle=":", label=T["median_line"])
-    ax.set_xlabel(T["word_count_label"])
-    ax.legend()
-
-    st.pyplot(fig)
-
+    if len(df) > 1:
+        st.subheader(T["distribution"])
+        fig, ax = plt.subplots(figsize=(10,4))
+        kde = gaussian_kde(df["word_count"])
+        x = np.linspace(df["word_count"].min(),df["word_count"].max(),500)
+        y = kde(x)
+        ax.plot(x,y, label=T["density"])
+        ax.axvline(R["mean"], linestyle="--", label=T["mean_line"])
+        ax.axvline(R["median"], linestyle=":", label=T["median_line"])
+        ax.set_xlabel(T["word_count_label"])
+        ax.legend()
+        st.pyplot(fig)
