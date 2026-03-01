@@ -258,66 +258,48 @@ def scrape_consultation_with_progress(parent_id: str, base: str):
 
 def optimized_fuzzy_groups(df: pd.DataFrame, threshold: float, step_status=None):
     """
-    Returns:
-      group_sizes: dict[rep_index -> size]
-      group_ids: dict[rep_index -> list(comment_ids)]
-    Strategy:
-      - bucket by first 40 chars
-      - length ratio filter (<=20%)
-      - SequenceMatcher only within bucket
+    Length-based fuzzy grouping.
+    Much more reliable for campaign comments.
     """
-    texts = df["text_clean"].tolist()
-    buckets = {}
 
-    for idx, text in enumerate(texts):
-        key = text[:40]
-        buckets.setdefault(key, []).append(idx)
+    texts = df["text_clean"].tolist()
+    lengths = [len(t) for t in texts]
 
     group_sizes = {}
     group_ids = {}
+    used = set()
 
-    # progress over buckets (not too noisy)
-    bucket_keys = list(buckets.keys())
-    n_buckets = max(1, len(bucket_keys))
+    n = len(texts)
 
-    for bi, key in enumerate(bucket_keys, start=1):
+    for i in range(n):
         if st.session_state.abort:
             break
 
-        if step_status is not None and (bi % 10 == 0 or bi == 1 or bi == n_buckets):
-            step_status.write(
-                f"{T.get('dup_progress','Detecting duplicates')}… {bi}/{n_buckets}"
-            )
+        if i in used:
+            continue
 
-        bucket = buckets[key]
-        # compare within bucket
-        for i in range(len(bucket)):
-            if st.session_state.abort:
-                break
+        t1 = texts[i]
+        len1 = lengths[i]
+        group = [i]
 
-            idx_i = bucket[i]
-            if idx_i in group_sizes:
+        for j in range(i + 1, n):
+            if j in used:
                 continue
 
-            t1 = texts[idx_i]
-            group = [idx_i]
+            t2 = texts[j]
+            len2 = lengths[j]
 
-            for j in bucket[i+1:]:
-                if st.session_state.abort:
-                    break
+            # length window filter (±20%)
+            if abs(len1 - len2) / max(len1, len2) > 0.2:
+                continue
 
-                t2 = texts[j]
+            if SequenceMatcher(None, t1, t2).ratio() >= threshold:
+                group.append(j)
+                used.add(j)
 
-                # length ratio filter
-                if abs(len(t1) - len(t2)) / max(len(t1), len(t2)) > 0.2:
-                    continue
-
-                if SequenceMatcher(None, t1, t2).ratio() >= threshold:
-                    group.append(j)
-
-            if len(group) > 1:
-                group_sizes[idx_i] = len(group)
-                group_ids[idx_i] = df.loc[group, "comment_id"].astype(str).tolist()
+        if len(group) > 1:
+            group_sizes[i] = len(group)
+            group_ids[i] = df.loc[group, "comment_id"].astype(str).tolist()
 
     df["dup_size"] = 1
     for rep_idx, size in group_sizes.items():
@@ -513,7 +495,7 @@ if run_button and url_input:
 # DISPLAY RESULTS (PERSIST)
 # =========================================================
 
-if st.session_state.results:
+if st.session_state.results and not st.session_state.running:
     R = st.session_state.results
     df = R["df"]
     base = R["base"]
@@ -734,6 +716,7 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
 
 
 
