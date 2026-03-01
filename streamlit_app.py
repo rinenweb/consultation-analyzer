@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 from scipy.stats import gaussian_kde
 from difflib import SequenceMatcher
 from translations import TRANSLATIONS
+import json
 
 st.set_page_config(page_title="Consultation Analyzer", layout="wide")
 
@@ -485,10 +486,23 @@ if st.session_state.results:
 
     # --- CORE METRICS ---
     c1, c2, c3, c4 = st.columns(4)
+    
     c1.metric(T.get("total", "Total Comments"), len(df))
-    c2.metric(T["campaign"], R["campaign_share"], help=T.get("campaign_help", None))
-    c3.metric(T.get("templates", "Duplicate Templates"), R["duplicate_templates"], help=T.get("templates_help", None))
-    c4.metric(T.get("strict", "Strict Layer"), R["strict_layer"], help=T.get("strict_desc", None))
+    c2.metric(
+        T["campaign"],
+        R["campaign_share"],
+        help=T.get("campaign_help", None)
+    )
+    c3.metric(
+        T.get("duplicate_templates", "Duplicate Templates"),
+        R["duplicate_templates"],
+        help=T.get("duplicate_templates_help", None)
+    )
+    c4.metric(
+        T.get("strict", "Strict Layer"),
+        R["strict_layer"],
+        help=T.get("strict_desc", None)
+    )
 
     # --- TEXT STATISTICS ---
     st.subheader(T.get("stats", "Text Statistics"))
@@ -556,7 +570,81 @@ if st.session_state.results:
         ax.set_xlabel(T.get("word_count_label", "Word count"))
         ax.legend()
         st.pyplot(fig)
-
+    
+    # ---------------------------
+    # EXPORTS (CSV + METADATA)
+    # ---------------------------
+    
+    exp1, exp2 = st.columns([1, 1])
+    
+    # 1) Comments CSV export (enriched)
+    export_df = df.copy()
+    
+    # ensure columns exist (safety)
+    for col in ["dup_size", "mentions_article", "mentions_amendment"]:
+        if col not in export_df.columns:
+            export_df[col] = False
+    
+    export_df["is_duplicate"] = export_df.get("dup_size", 1) > 1
+    export_df["strict_flag"] = export_df.get("mentions_article", False) & export_df.get("mentions_amendment", False)
+    
+    # stable column order
+    cols_order = [
+        "chapter_p", "comment_id", "text",
+        "word_count",
+        "dup_size", "is_duplicate",
+        "mentions_article", "mentions_amendment", "strict_flag"
+    ]
+    cols_order = [c for c in cols_order if c in export_df.columns]
+    export_df = export_df[cols_order]
+    
+    csv_bytes = export_df.to_csv(index=False).encode("utf-8")
+    
+    with exp1:
+        st.download_button(
+            label=T.get("export_comments_csv", "Export comments (CSV)"),
+            data=csv_bytes,
+            file_name=f"comments_{R.get('parent_id','consultation')}.csv",
+            mime="text/csv"
+        )
+    
+    # 2) Metadata JSON export (reproducibility)
+    metadata = {
+        "base": R.get("base"),
+        "parent_id": R.get("parent_id"),
+        "timestamp": R.get("timestamp"),
+        "total_comments": int(len(df)),
+        "total_chapters": int(len(R.get("chapters", []))),
+        "duplicate_method": R.get("duplicate_method"),
+        "similarity_threshold": R.get("similarity_threshold"),
+        "campaign_share_pct": float(R.get("campaign_share")),
+        "duplicate_templates": int(R.get("duplicate_templates")),
+        "strict_layer_pct": float(R.get("strict_layer")),
+        "policy_keywords": R.get("policy_keywords"),
+        "amendment_keywords": R.get("amendment_keywords"),
+        "text_stats": {
+            "mean_words": float(R.get("mean")),
+            "median_words": float(R.get("median")),
+            "max_words": int(R.get("max")),
+            "std_words": float(R.get("std")),
+        },
+        "tool": {
+            "name": "consultation-analyzer",
+            "repo": "https://github.com/rinenweb/consultation-analyzer/",
+            "version": "wip"
+        }
+    }
+    
+    meta_bytes = json.dumps(metadata, ensure_ascii=False, indent=2).encode("utf-8")
+    
+    with exp2:
+        st.download_button(
+            label=T.get("export_metadata_json", "Export analysis metadata (JSON)"),
+            data=meta_bytes,
+            file_name=f"metadata_{R.get('parent_id','consultation')}.json",
+            mime="application/json"
+        )
+    
     # --- METHODOLOGICAL PANEL ---
     with st.expander(T.get("method_panel", "Methodological Parameters & Execution Transparency"), expanded=False):
         st.markdown(f"### {T.get('execution_summary','Execution Summary')}")
@@ -612,4 +700,5 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
 
