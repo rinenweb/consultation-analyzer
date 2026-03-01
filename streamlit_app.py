@@ -258,8 +258,7 @@ def scrape_consultation_with_progress(parent_id: str, base: str):
 
 def optimized_fuzzy_groups(df: pd.DataFrame, threshold: float, step_status=None):
     """
-    Length-based fuzzy grouping.
-    Much more reliable for campaign comments.
+    Length-based fuzzy grouping with live progress feedback.
     """
 
     texts = df["text_clean"].tolist()
@@ -272,17 +271,25 @@ def optimized_fuzzy_groups(df: pd.DataFrame, threshold: float, step_status=None)
     n = len(texts)
 
     for i in range(n):
+
         if st.session_state.abort:
             break
 
         if i in used:
             continue
 
+        # ---- progress update every 10 iterations ----
+        if step_status and (i % 10 == 0 or i == n - 1):
+            step_status.write(
+                f"{T.get('dup_progress','Detecting duplicates')}… {i+1}/{n}"
+            )
+
         t1 = texts[i]
         len1 = lengths[i]
         group = [i]
 
         for j in range(i + 1, n):
+
             if j in used:
                 continue
 
@@ -306,7 +313,6 @@ def optimized_fuzzy_groups(df: pd.DataFrame, threshold: float, step_status=None)
         df.loc[rep_idx, "dup_size"] = size
 
     return group_sizes, group_ids
-
 # =========================================================
 # RUN
 # =========================================================
@@ -716,6 +722,7 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
 
 
 
