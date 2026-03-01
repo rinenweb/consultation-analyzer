@@ -13,6 +13,13 @@ from translations import TRANSLATIONS
 st.set_page_config(page_title="Consultation Analyzer", layout="wide")
 
 # ---------------------------
+# SESSION STATE (ABORT)
+# ---------------------------
+
+if "abort" not in st.session_state:
+    st.session_state.abort = False
+
+# ---------------------------
 # LANGUAGE SWITCH (FLAGS)
 # ---------------------------
 
@@ -57,17 +64,18 @@ with st.expander(T["advanced"]):
         "να προστεθ,να διαγραφ,να αντικατασταθ,να τροποποιηθ"
     )
 
-    # Duplicate detection method
+    # Default = Fuzzy
     duplicate_method = st.radio(
-        "Duplicate detection method",
-        ["Exact match", "Fuzzy match"],
-        horizontal=True
+        T["duplicate_method_label"],
+        [T["fuzzy_match"], T["exact_match"]],
+        horizontal=True,
+        index=0
     )
 
     similarity_threshold = 90
-    if duplicate_method == "Fuzzy match":
+    if duplicate_method == T["fuzzy_match"]:
         similarity_threshold = st.slider(
-            "Similarity threshold (%)",
+            T["similarity_threshold"],
             min_value=80,
             max_value=100,
             value=90
@@ -76,7 +84,7 @@ with st.expander(T["advanced"]):
 run_button = st.button(T["run"])
 
 # ---------------------------
-# SCRAPER
+# SCRAPER (CACHED 10 MIN)
 # ---------------------------
 
 def get_chapters(parent_id):
@@ -99,19 +107,16 @@ def get_chapters(parent_id):
     return chapters
 
 
-def run_scraping(parent_id):
+@st.cache_data(ttl=600)
+def run_scraping_cached(parent_id):
 
     base = "https://www.opengov.gr/minenv/"
     all_rows = []
     chapters = get_chapters(parent_id)
     max_pages = 300
 
-    progress = st.progress(0)
-    status = st.empty()
-
-    for i, ch in enumerate(chapters):
+    for ch in chapters:
         pid = ch["pid"]
-        status.write(f"Scraping chapter {i+1}/{len(chapters)} (p={pid})")
         prev_first = None
 
         for cpage in range(1, max_pages):
@@ -143,11 +148,6 @@ def run_scraping(parent_id):
 
             time.sleep(0.2)
 
-        progress.progress((i+1)/len(chapters))
-
-    progress.empty()
-    status.empty()
-
     return pd.DataFrame(all_rows), chapters
 
 
@@ -160,14 +160,27 @@ def similarity(a, b):
 
 if run_button and url_input:
 
+    st.session_state.abort = False
+
     if "opengov.gr" not in url_input and not url_input.isdigit():
         st.error("Only opengov.gr consultations or valid parent IDs are allowed.")
         st.stop()
 
     parent_id = re.search(r"\?p=(\d+)", url_input).group(1) if "opengov.gr" in url_input else url_input
 
-    with st.spinner(T["scraping"]):
-        df, chapters = run_scraping(parent_id)
+    col_spin, col_abort = st.columns([8,1])
+
+    with col_abort:
+        abort_clicked = st.button("Abort" if lang=="en" else "Ακύρωση")
+
+    if abort_clicked:
+        st.session_state.abort = True
+        st.warning("Aborted." if lang=="en" else "Η διαδικασία ακυρώθηκε.")
+        st.stop()
+
+    with col_spin:
+        with st.spinner(T["scraping"]):
+            df, chapters = run_scraping_cached(parent_id)
 
     st.success(T["completed"])
 
@@ -178,7 +191,7 @@ if run_button and url_input:
     # DUPLICATE DETECTION
     # ---------------------------
 
-    if duplicate_method == "Exact match":
+    if duplicate_method == T["exact_match"]:
 
         dup_counts = df["text_clean"].value_counts()
         df["dup_size"] = df["text_clean"].map(dup_counts)
@@ -233,54 +246,11 @@ if run_button and url_input:
 
     col1.metric(T["total"], len(df))
 
-    col2.metric(
-        T["campaign"],
-        campaign_share,
-        help=T["campaign_help"]
-    )
+    col2.metric(T["campaign"], campaign_share, help=T["campaign_help"])
 
-    col3.metric(
-        T["templates"],
-        duplicate_templates,
-        help=T["templates_help"]
-    )
+    col3.metric(T["templates"], duplicate_templates, help=T["templates_help"])
 
-    col4.metric(
-        T["strict"],
-        strict_layer,
-        help=T["strict_desc"]
-    )
-
-    # ---------------------------
-    # TOP TEMPLATES
-    # ---------------------------
-
-    if duplicate_templates > 0:
-
-        with st.expander("Top Duplicate Templates", expanded=False):
-
-            top_templates = template_groups.sort_values(ascending=False)
-
-            if len(top_templates) > 5:
-                top_templates = top_templates.head(5)
-
-            for idx, count in top_templates.items():
-
-                if duplicate_method == "Exact match":
-                    text = idx
-                else:
-                    text = df.loc[idx, "text"]
-
-                st.markdown(f"**Occurrences:** {count}")
-
-                preview = text[:400] + ("..." if len(text) > 400 else "")
-                st.write(preview)
-
-                if len(text) > 400:
-                    with st.expander("Show full text"):
-                        st.write(text)
-
-                st.markdown("---")
+    col4.metric(T["strict"], strict_layer, help=T["strict_desc"])
 
     # ---------------------------
     # TEXT STATISTICS
@@ -309,12 +279,12 @@ if run_button and url_input:
     x = np.linspace(df["word_count"].min(), df["word_count"].max(), 500)
     y = kde(x)
 
-    ax.plot(x, y, label="Density")
-    ax.axvline(mean, linestyle="--", label="Mean")
-    ax.axvline(median, linestyle=":", label="Median")
+    ax.plot(x, y, label=T["density"])
+    ax.axvline(mean, linestyle="--", label=T["mean_line"])
+    ax.axvline(median, linestyle=":", label=T["median_line"])
 
-    ax.set_xlabel("Word count")
-    ax.set_ylabel("Density")
+    ax.set_xlabel(T["word_count_label"])
+    ax.set_ylabel(T["density"])
     ax.legend()
     ax.tick_params(axis='y', labelleft=False)
 
@@ -346,7 +316,7 @@ if run_button and url_input:
         st.markdown("### " + T["active_configuration"])
         st.write("Duplicate detection method:", duplicate_method)
 
-        if duplicate_method == "Fuzzy match":
+        if duplicate_method == T["fuzzy_match"]:
             st.write("Similarity threshold (%):", similarity_threshold)
 
         st.write("Stopwords:", stopwords_input)
