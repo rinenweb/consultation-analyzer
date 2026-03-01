@@ -21,6 +21,7 @@ TRANSLATIONS = {
         "loaded_cache": "Results loaded from cache.",
         "completed": "Analysis completed.",
         "abort": "Abort",
+        "no_comments": "No comments found or scraping aborted.",
 
         # --- Duplicate Detection ---
         "duplicate_method_label": "Duplicate detection method",
@@ -98,6 +99,7 @@ TRANSLATIONS = {
         "loaded_cache": "Τα αποτελέσματα φορτώθηκαν από cache.",
         "completed": "Η ανάλυση ολοκληρώθηκε.",
         "abort": "Ακύρωση",
+        "no_comments": "Δεν βρέθηκαν σχόλια ή η διαδικασία ακυρώθηκε.",
 
         # --- Duplicate Detection ---
         "duplicate_method_label": "Μέθοδος εντοπισμού διπλότυπων",
