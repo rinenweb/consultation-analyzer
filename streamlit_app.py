@@ -132,7 +132,6 @@ def run_scraping(parent_id):
 
     return pd.DataFrame(all_rows), chapters
 
-
 # ---------------------------
 # RUN
 # ---------------------------
@@ -155,16 +154,22 @@ if run_button and url_input:
     df["dup_size"] = df["text_clean"].map(dup_counts)
     df["word_count"] = df["text"].str.split().apply(len)
 
+    # Strict Layer calculation
+    policy_patterns = [w.strip() for w in policy_keywords_input.split(",")]
+    amend_patterns = [w.strip() for w in amendment_keywords_input.split(",")]
+
+    df["mentions_article"] = df["text_clean"].str.contains("|".join(policy_patterns), regex=True)
+    df["mentions_amendment"] = df["text_clean"].str.contains("|".join(amend_patterns), regex=True)
+
+    strict_layer = round((df["mentions_article"] & df["mentions_amendment"]).mean() * 100, 2)
+
     campaign_share = round((df["dup_size"] > 1).mean()*100,2)
     duplicate_templates = int((dup_counts > 1).sum())
 
-    # Metrics
-    col1, col2, col3 = st.columns(3)
+    # ---- CORE METRICS ----
+    col1, col2, col3, col4 = st.columns(4)
 
-    col1.metric(
-        T["total"],
-        len(df)
-    )
+    col1.metric(T["total"], len(df))
 
     col2.metric(
         T["campaign"],
@@ -178,7 +183,13 @@ if run_button and url_input:
         help=T["templates_help"]
     )
 
-    # Statistics
+    col4.metric(
+        T["strict"],
+        strict_layer,
+        help=T["strict_desc"]
+    )
+
+    # ---- TEXT STATISTICS ----
     st.subheader(T["stats"])
 
     mean = df["word_count"].mean()
@@ -190,7 +201,7 @@ if run_button and url_input:
     c2.metric(T["median"], round(median,2), help=T["median_help"])
     c3.metric(T["std"], round(std,2), help=T["std_help"])
 
-    # KDE Plot
+    # ---- KDE PLOT ----
     st.subheader(T["distribution"])
 
     kde = gaussian_kde(df["word_count"])
@@ -204,10 +215,7 @@ if run_button and url_input:
     ax.legend()
     st.pyplot(fig)
 
-    # ---------------------------
-    # METHODOLOGICAL PANEL
-    # ---------------------------
-
+    # ---- METHODOLOGICAL PANEL ----
     with st.expander(T["method_panel"], expanded=False):
 
         st.markdown("### " + T["execution_summary"])
@@ -226,12 +234,8 @@ if run_button and url_input:
 
         st.dataframe(chapter_df, use_container_width=True)
 
-        st.markdown("### " + T["metric_definitions"])
-        st.markdown(T["definitions_text"])
-
         st.markdown("### " + T["active_configuration"])
         st.write("Stopwords:", stopwords_input)
         st.write("Policy keywords:", policy_keywords_input)
         st.write("Amendment verbs:", amendment_keywords_input)
         st.write(T["timestamp"] + ":", str(pd.Timestamp.now()))
-
