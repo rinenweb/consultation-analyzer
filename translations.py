@@ -51,6 +51,14 @@ TRANSLATIONS = {
         "mean_help": "Arithmetic average number of words per comment.",
         "median_help": "Middle value of word-count distribution.",
         "std_help": "Standard deviation of comment length.",
+        "duplicate_templates_help": (
+        "Number of distinct repeated comment texts (templates). "
+        "Each template is counted once, regardless of how many times it appears."
+        ),
+
+        # --- Export buttons ---
+        "export_comments_csv": "Export comments (CSV)",
+        "export_metadata_json": "Export analysis metadata (JSON)",
 
         # --- Distribution ---
         "distribution": "Comment Length Distribution (Kernel Density Estimation)",
@@ -149,6 +157,15 @@ TRANSLATIONS = {
         "mean_help": "Αριθμητικός μέσος όρος λέξεων ανά σχόλιο.",
         "median_help": "Κεντρική τιμή της κατανομής μήκους.",
         "std_help": "Τυπική απόκλιση μήκους σχολίων.",
+        # --- Tooltip ---
+        "duplicate_templates_help": (
+            "Αριθμός διαφορετικών επαναλαμβανόμενων κειμένων (templates). "
+            "Κάθε template μετράται μία φορά, ανεξάρτητα από το πλήθος εμφανίσεων."
+        ),
+
+        # --- Export buttons ---
+        "export_comments_csv": "Εξαγωγή σχολίων (CSV)",
+        "export_metadata_json": "Εξαγωγή μεταδεδομένων ανάλυσης (JSON)",
 
         # --- Distribution ---
         "distribution": "Κατανομή Μήκους Σχολίων (Εκτίμηση Πυκνότητας Kernel)",
