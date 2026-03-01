@@ -79,7 +79,7 @@ TRANSLATIONS = {
     
         "methodology_note": (
         "The analysis is fully rule-based and methodologically transparent. "
-        "Metrics are calculated using predefined textual patterns and similarity thresholds."
+        "Metrics are calculated using predefined textual patterns and similarity thresholds, editable by users."
         ),
         "developed_by": "Developed with ❤️ by",
 
@@ -168,7 +168,7 @@ TRANSLATIONS = {
 
         # --- Footer / Disclaimer ---
         "disclaimer_text": (
-            "Το παρόν εργαλείο αποτελεί work in progress στο πλαίσιο του "
+            "Το παρόν εργαλείο αποτελεί έργο εν εξελίξει στο πλαίσιο του "
             "Μεταπτυχιακού Προγράμματος «Ηλεκτρονική Διακυβέρνηση» "
             "του Πανεπιστημίου Αιγαίου και αποσκοπεί στην εξαγωγή και "
             "ανάλυση σχολίων που υποβάλλονται σε δημόσιες διαβουλεύσεις "
@@ -178,7 +178,7 @@ TRANSLATIONS = {
         "methodology_note": (
             "Η ανάλυση είναι πλήρως βασισμένη σε κανόνες και μεθοδολογικά διαφανής. "
             "Οι μετρικές υπολογίζονται βάσει προκαθορισμένων γλωσσικών προτύπων "
-            "και κατωφλίων ομοιότητας."
+            "και κατωφλίων ομοιότητας, τα οποία είναι διαθέσιμα προς επεξεργασία από τους χρήστες."
         ),
         
         "developed_by": "Developed with ❤️ by",
