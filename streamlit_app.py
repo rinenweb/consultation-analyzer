@@ -125,6 +125,37 @@ def render_steps(placeholder, steps, active_idx, done_set):
     placeholder.markdown("\n\n".join(lines))
 
 # =========================================================
+# TEXT CANONICALIZATION (FOR DUPLICATE DETECTION)
+# =========================================================
+
+def canonicalize_text(text: str) -> str:
+    """
+    Produces a canonical version of the comment text
+    for duplicate detection purposes.
+
+    Removes:
+    - trailing numeric ID blocks
+    - '+X more' tails
+    - excessive whitespace
+    """
+
+    if not isinstance(text, str):
+        return ""
+
+    text = text.lower().strip()
+
+    # remove trailing lines containing only numbers (IDs)
+    text = re.sub(r"\n?\s*(\d+\s+)+\d+\s*", "", text)
+
+    # remove '+X more' fragments
+    text = re.sub(r"\+?\d+\s*more", "", text)
+
+    # normalize whitespace
+    text = re.sub(r"\s+", " ", text)
+
+    return text.strip()
+
+# =========================================================
 # PURE SCRAPING (WITH PROGRESS + ABORT CHECKS)
 # =========================================================
 
@@ -361,7 +392,10 @@ if run_button and url_input:
 
     # ================= STEP 2: NORMALIZE =================
 
-    df["text_clean"] = df["text"].astype(str).str.strip().str.lower()
+    # canonical text for duplicate detection
+    df["text_clean"] = df["text"].astype(str).apply(canonicalize_text)
+
+    # word count based on original text (not canonicalized)
     df["word_count"] = df["text"].astype(str).str.split().apply(len)
 
     done.add(1)
@@ -700,6 +734,7 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
 
 
 
