@@ -65,6 +65,22 @@ TRANSLATIONS = {
             "that simultaneously reference a legislative article and propose "
             "a textual amendment."
         ),
+         # --- Duplicate Detection ---
+        "duplicate_method_label": "Duplicate detection method",
+        "exact_match": "Exact match",
+        "fuzzy_match": "Fuzzy match",
+        "similarity_threshold": "Similarity threshold (%)",
+
+        # --- Top Templates ---
+        "top_templates": "Top Duplicate Templates",
+        "occurrences": "Occurrences",
+        "show_full_text": "Show full text",
+
+        # --- KDE Labels ---
+        "density": "Density",
+        "mean_line": "Mean",
+        "median_line": "Median",
+        "word_count_label": "Word count",
 
         "active_configuration": "Active Configuration",
         "chapter_table_headers": [
@@ -162,6 +178,22 @@ TRANSLATIONS = {
             "Εκτιμά το ποσοστό σχολίων που αναφέρονται σε συγκεκριμένο άρθρο "
             "και ταυτόχρονα προτείνουν ρητή τροποποίηση."
         ),
+        # --- Duplicate Detection ---
+        "duplicate_method_label": "Μέθοδος εντοπισμού διπλότυπων",
+        "exact_match": "Ακριβής Ταύτιση",
+        "fuzzy_match": "Προσεγγιστική Ταύτιση",
+        "similarity_threshold": "Κατώφλι Ομοιότητας (%)",
+
+        # --- Top Templates ---
+        "top_templates": "Κορυφαία Επαναλαμβανόμενα Templates",
+        "occurrences": "Εμφανίσεις",
+        "show_full_text": "Εμφάνιση πλήρους κειμένου",
+
+        # --- KDE Labels ---
+        "density": "Πυκνότητα",
+        "mean_line": "Μέσος Όρος",
+        "median_line": "Διάμεσος",
+        "word_count_label": "Αριθμός λέξεων",
 
         "active_configuration": "Ενεργές Ρυθμίσεις",
 
