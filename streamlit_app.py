@@ -16,9 +16,6 @@ st.set_page_config(page_title="Consultation Analyzer", layout="wide")
 # SESSION STATE
 # =========================================================
 
-if "abort" not in st.session_state:
-    st.session_state.abort = False
-
 if "results" not in st.session_state:
     st.session_state.results = None
 
@@ -26,7 +23,7 @@ if "results" not in st.session_state:
 # LANGUAGE
 # =========================================================
 
-col_left, col_right = st.columns([10,1])
+col_left, col_right = st.columns([10, 1])
 with col_right:
     lang_flag = st.radio("", ["🇬🇧", "🇬🇷"], horizontal=True, label_visibility="collapsed")
 
@@ -70,13 +67,49 @@ with st.expander(T["advanced"]):
 
 run_button = st.button(T["run"])
 
-BASE = "https://www.opengov.gr/minenv/"
-
 # =========================================================
-# PURE SCRAPING (NO STREAMLIT HERE)
+# UTIL: EXTRACT BASE + PARENT ID
 # =========================================================
 
-def scrape_chapter(pid):
+def extract_base_and_parent(url_input):
+
+    match = re.search(r"https://www\.opengov\.gr/([^/]+)/\?p=(\d+)", url_input)
+
+    if not match:
+        return None, None
+
+    ministry = match.group(1)
+    parent_id = match.group(2)
+
+    base = f"https://www.opengov.gr/{ministry}/"
+
+    return base, parent_id
+
+# =========================================================
+# PURE SCRAPING (NO STREAMLIT INSIDE)
+# =========================================================
+
+def get_chapters(parent_id, BASE):
+
+    r = requests.get(f"{BASE}?p={parent_id}")
+    soup = BeautifulSoup(r.text, "html5lib")
+    nav = soup.find("ul", class_="other_posts")
+
+    chapters = []
+
+    if nav:
+        for a in nav.find_all("a", class_="list_comments_link"):
+            match = re.search(r"\?p=(\d+)", a["href"])
+            if match:
+                chapters.append({
+                    "pid": int(match.group(1)),
+                    "title": a.get("title", "")
+                })
+
+    return chapters
+
+
+def scrape_chapter(pid, BASE):
 
     rows = []
     max_pages = 300
@@ -112,30 +145,14 @@ def scrape_chapter(pid):
     return rows
 
 
-def get_chapters(parent_id):
-    r = requests.get(f"{BASE}?p={parent_id}")
-    soup = BeautifulSoup(r.text, "html5lib")
-    nav = soup.find("ul", class_="other_posts")
-    chapters = []
-    if nav:
-        for a in nav.find_all("a", class_="list_comments_link"):
-            match = re.search(r"\?p=(\d+)", a["href"])
-            if match:
-                chapters.append({
-                    "pid": int(match.group(1)),
-                    "title": a.get("title", "")
-                })
-    return chapters
-
-
 @st.cache_data(ttl=600)
-def scrape_consultation_cached(parent_id):
+def scrape_consultation_cached(parent_id, BASE):
 
-    chapters = get_chapters(parent_id)
+    chapters = get_chapters(parent_id, BASE)
     all_rows = []
 
     for ch in chapters:
-        rows = scrape_chapter(ch["pid"])
+        rows = scrape_chapter(ch["pid"], BASE)
         all_rows.extend(rows)
 
     return pd.DataFrame(all_rows), chapters
@@ -192,16 +209,14 @@ def optimized_fuzzy_groups(df, threshold):
 
 if run_button and url_input:
 
-    st.session_state.abort = False
+    BASE, parent_id = extract_base_and_parent(url_input)
 
-    if "opengov.gr" not in url_input and not url_input.isdigit():
-        st.error("Invalid consultation URL or ID.")
+    if not BASE:
+        st.error("Please provide full valid opengov consultation URL.")
         st.stop()
 
-    parent_id = re.search(r"\?p=(\d+)", url_input).group(1) if "opengov.gr" in url_input else url_input
-
     with st.spinner(T["scraping"]):
-        df, chapters = scrape_consultation_cached(parent_id)
+        df, chapters = scrape_consultation_cached(parent_id, BASE)
 
     if df.empty:
         st.warning(T["no_comments"])
@@ -250,7 +265,8 @@ if run_button and url_input:
         "median": median,
         "std": std,
         "template_groups": template_groups,
-        "template_ids": template_ids
+        "template_ids": template_ids,
+        "BASE": BASE
     }
 
 # =========================================================
@@ -261,6 +277,7 @@ if st.session_state.results:
 
     R = st.session_state.results
     df = R["df"]
+    BASE = R["BASE"]
 
     col1, col2, col3 = st.columns(3)
     col1.metric(T["campaign"], R["campaign_share"], help=T["campaign_help"])
@@ -273,7 +290,15 @@ if st.session_state.results:
             for idx,count in top.items():
                 text = df.loc[int(idx),"text"]
                 st.markdown(f"**{T['occurrences']}: {count}**")
-                st.write(text[:400]+"...")
+                preview = text[:400] + ("..." if len(text)>400 else "")
+                st.write(preview)
+
+                with st.expander(T["show_full_text"]):
+                    st.write(text)
+                    ids = R["template_ids"].get(idx,[])[:10]
+                    links = [f"[{cid}]({BASE}?c={cid})" for cid in ids]
+                    st.markdown(" ".join(links))
+
                 st.markdown("---")
 
     if len(df) > 1:
