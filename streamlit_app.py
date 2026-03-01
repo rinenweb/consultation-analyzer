@@ -107,19 +107,32 @@ def get_chapters(parent_id):
     return chapters
 
 
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=600, show_spinner=False)
 def run_scraping_cached(parent_id):
+    return run_scraping(parent_id)
+    
+def run_scraping(parent_id):
 
     base = "https://www.opengov.gr/minenv/"
     all_rows = []
     chapters = get_chapters(parent_id)
     max_pages = 300
 
-    for ch in chapters:
+    progress = st.progress(0)
+    status = st.empty()
+
+    for i, ch in enumerate(chapters):
         pid = ch["pid"]
+        status.write(f"Scraping chapter {i+1}/{len(chapters)} (p={pid})")
         prev_first = None
 
         for cpage in range(1, max_pages):
+
+            if st.session_state.abort:
+                progress.empty()
+                status.empty()
+                return pd.DataFrame(), chapters
+
             url = f"{base}?p={pid}&cpage={cpage}#comments"
             r = requests.get(url)
             soup = BeautifulSoup(r.text, "html5lib")
@@ -148,8 +161,12 @@ def run_scraping_cached(parent_id):
 
             time.sleep(0.2)
 
-    return pd.DataFrame(all_rows), chapters
+        progress.progress((i+1)/len(chapters))
 
+    progress.empty()
+    status.empty()
+
+    return pd.DataFrame(all_rows), chapters
 
 def similarity(a, b):
     return SequenceMatcher(None, a, b).ratio()
@@ -178,11 +195,18 @@ if run_button and url_input:
         st.warning("Aborted." if lang=="en" else "Η διαδικασία ακυρώθηκε.")
         st.stop()
 
+    start_time = time.time()
+
     with col_spin:
         with st.spinner(T["scraping"]):
             df, chapters = run_scraping_cached(parent_id)
 
-    st.success(T["completed"])
+    duration = time.time() - start_time
+
+    if duration < 0.5:
+        st.info("Results loaded from cache." if lang=="en" else "Τα αποτελέσματα φορτώθηκαν από cache.")
+    else:
+        st.success(T["completed"])
 
     df["text_clean"] = df["text"].str.strip().str.lower()
     df["word_count"] = df["text"].str.split().apply(len)
@@ -323,3 +347,4 @@ if run_button and url_input:
         st.write("Policy keywords:", policy_keywords_input)
         st.write("Amendment verbs:", amendment_keywords_input)
         st.write(T["timestamp"] + ":", str(pd.Timestamp.now()))
+
