@@ -64,7 +64,7 @@ TRANSLATIONS = {
         "show_full_text": "Show full text",
 
         # --- Method Panel ---
-        "method_panel": "Methodological Parameters & Execution Transparency",
+        "method_panel": "Methodological Parameters",
         "execution_summary": "Execution Summary",
         "active_configuration": "Active Configuration",
         "timestamp": "Run timestamp",
@@ -161,7 +161,7 @@ TRANSLATIONS = {
         "show_full_text": "Εμφάνιση πλήρους κειμένου",
 
         # --- Method Panel ---
-        "method_panel": "Μεθοδολογικές Παράμετροι & Διαφάνεια Εκτέλεσης",
+        "method_panel": "Μεθοδολογικές Παράμετροι",
         "execution_summary": "Σύνοψη Εκτέλεσης",
         "active_configuration": "Ενεργές Ρυθμίσεις",
         "timestamp": "Χρόνος Εκτέλεσης",
@@ -178,7 +178,7 @@ TRANSLATIONS = {
         "methodology_note": (
             "Η ανάλυση είναι πλήρως βασισμένη σε κανόνες και μεθοδολογικά διαφανής. "
             "Οι μετρικές υπολογίζονται βάσει προκαθορισμένων γλωσσικών προτύπων "
-            "και κατωφλίων ομοιότητας, τα οποία είναι διαθέσιμα προς επεξεργασία από τους χρήστες."
+            "και κατωφλιών ομοιότητας, τα οποία είναι διαθέσιμα προς επεξεργασία από τους χρήστες."
         ),
         
         "developed_by": "Developed with ❤️ by",
