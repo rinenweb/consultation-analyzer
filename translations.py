@@ -25,6 +25,7 @@ TRANSLATIONS = {
 
         # --- Duplicate Detection ---
         "duplicate_method_label": "Duplicate detection method",
+        "duplicate_templates": "Duplicate Templates",
         "exact_match": "Exact match",
         "fuzzy_match": "Fuzzy match",
         "similarity_threshold": "Similarity threshold (%)",
@@ -122,6 +123,7 @@ TRANSLATIONS = {
 
         # --- Duplicate Detection ---
         "duplicate_method_label": "Μέθοδος εντοπισμού διπλότυπων",
+        "duplicate_templates": "Μοτίβα Διπλότυπων Σχολίων",
         "exact_match": "Ακριβής Ταύτιση",
         "fuzzy_match": "Προσεγγιστική Ταύτιση",
         "similarity_threshold": "Κατώφλι Ομοιότητας (%)",
