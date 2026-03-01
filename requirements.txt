@@ -5,3 +5,4 @@ html5lib
 pandas
 numpy
 matplotlib
+scipy
