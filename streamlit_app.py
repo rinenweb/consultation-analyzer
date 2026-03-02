@@ -8,7 +8,7 @@ import unicodedata
 import time
 import matplotlib.pyplot as plt
 from scipy.stats import gaussian_kde
-from difflib import SequenceMatcher
+from rapidfuzz import fuzz
 from translations import TRANSLATIONS
 import json
 
@@ -318,7 +318,7 @@ def optimized_fuzzy_groups(df: pd.DataFrame, threshold: float, step_status=None)
                 if abs(len1 - len2) / max(len1, len2) > 0.2:
                     continue
 
-                if SequenceMatcher(None, t1, texts[j]).ratio() >= threshold:
+                if fuzz.ratio(t1, texts[j]) >= threshold:
                     group.append(j)
                     used.add(j)
 
@@ -432,7 +432,7 @@ if run_button and url_input:
     else:
         group_sizes, group_ids = optimized_fuzzy_groups(
             df,
-            similarity_threshold / 100.0,
+            similarity_threshold,
             step_status=dup_status
         )
         template_groups = pd.Series(group_sizes).sort_values(ascending=False)
@@ -746,6 +746,7 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
 
 
 
