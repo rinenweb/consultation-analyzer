@@ -251,28 +251,53 @@ def scrape_consultation_with_progress(parent_id: str, base: str):
 
 def optimized_fuzzy_groups(df: pd.DataFrame, threshold: float, step_status=None):
     """
-    Bucketed length-based fuzzy grouping with neighbor-bucket tolerance (b-1, b, b+1).
-    Uses clean percentage progress bar.
+    Bucketed fuzzy grouping using Union-Find clustering.
+    Guarantees transitive closure and monotonic threshold behavior.
     """
 
     texts = df["text_clean"].tolist()
     lengths = [len(t) for t in texts]
     buckets = df["bucket"].tolist()
 
-    group_sizes = {}
-    group_ids = {}
-    used = set()
-    processed_reps = set()
-
     n = len(texts)
+
+    # ---------------------------
+    # Union-Find (Disjoint Set)
+    # ---------------------------
+
+    parent = list(range(n))
+    rank = [0] * n
+
+    def find(x):
+        if parent[x] != x:
+            parent[x] = find(parent[x])
+        return parent[x]
+
+    def union(x, y):
+        root_x = find(x)
+        root_y = find(y)
+        if root_x == root_y:
+            return
+        if rank[root_x] < rank[root_y]:
+            parent[root_x] = root_y
+        else:
+            parent[root_y] = root_x
+            if rank[root_x] == rank[root_y]:
+                rank[root_x] += 1
 
     # Progress bar
     progress_bar = st.progress(0.0)
+    comparisons_done = 0
+    approx_total = n  # representative progress metric
 
-    # Map bucket -> list of indices
+    # Map bucket -> indices
     bucket_map = {}
     for idx, b in enumerate(buckets):
         bucket_map.setdefault(b, []).append(idx)
+
+    # ---------------------------
+    # Similarity comparisons
+    # ---------------------------
 
     for bucket_value in bucket_map.keys():
 
@@ -282,56 +307,60 @@ def optimized_fuzzy_groups(df: pd.DataFrame, threshold: float, step_status=None)
         for cb in candidate_buckets:
             candidate_indices.extend(bucket_map.get(cb, []))
 
-        # deduplicate candidate list
+        # deduplicate indices
         seen = set()
         candidate_indices = [
             x for x in candidate_indices
             if not (x in seen or seen.add(x))
         ]
 
-        for pos_i, i in enumerate(candidate_indices):
+        for i_idx in range(len(candidate_indices)):
+            i = candidate_indices[i_idx]
 
             if st.session_state.abort:
                 progress_bar.empty()
                 return {}, {}
 
-            if i in used or i in processed_reps:
-                continue
+            for j_idx in range(i_idx + 1, len(candidate_indices)):
+                j = candidate_indices[j_idx]
 
-            processed_reps.add(i)
-
-            # ---- CLEAN PROGRESS ----
-            progress = len(processed_reps) / n
-            progress_bar.progress(min(progress, 1.0))
-
-            t1 = texts[i]
-            len1 = lengths[i]
-            group = [i]
-
-            for j in candidate_indices[pos_i + 1:]:
-
-                if j in used:
+                # length filter ±20%
+                if abs(lengths[i] - lengths[j]) / max(lengths[i], lengths[j]) > 0.2:
                     continue
 
-                len2 = lengths[j]
+                if fuzz.ratio(texts[i], texts[j]) >= threshold:
+                    union(i, j)
 
-                if abs(len1 - len2) / max(len1, len2) > 0.2:
-                    continue
-
-                if fuzz.ratio(t1, texts[j]) >= threshold:
-                    group.append(j)
-                    used.add(j)
-
-            if len(group) > 1:
-                group_sizes[i] = len(group)
-                group_ids[i] = df.loc[group, "comment_id"].astype(str).tolist()
+            comparisons_done += 1
+            progress_bar.progress(min(comparisons_done / approx_total, 1.0))
 
     progress_bar.empty()
 
+    # ---------------------------
+    # Build clusters
+    # ---------------------------
+
+    clusters = {}
+    for idx in range(n):
+        root = find(idx)
+        clusters.setdefault(root, []).append(idx)
+
+    group_sizes = {}
+    group_ids = {}
+
     df["dup_size"] = 1
-    for rep_idx, size in group_sizes.items():
-        member_indices = df.index[df["comment_id"].astype(str).isin(group_ids[rep_idx])]
-        df.loc[member_indices, "dup_size"] = size
+
+    for root, members in clusters.items():
+        if len(members) > 1:
+            representative = members[0]
+            size = len(members)
+
+            group_sizes[representative] = size
+            group_ids[representative] = (
+                df.loc[members, "comment_id"].astype(str).tolist()
+            )
+
+            df.loc[members, "dup_size"] = size
 
     return group_sizes, group_ids
 # =========================================================
@@ -748,6 +777,7 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
 
 
 
