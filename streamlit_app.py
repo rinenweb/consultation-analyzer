@@ -247,7 +247,7 @@ def scrape_consultation_with_progress(parent_id: str, base: str):
 
 def optimized_fuzzy_groups(df: pd.DataFrame, threshold: float, step_status=None):
     """
-    Bucketed length-based fuzzy grouping with live progress feedback.
+    Bucketed length-based fuzzy grouping with neighbor-bucket tolerance (b-1, b, b+1).
     Keeps original grouping logic intact.
     """
 
@@ -268,9 +268,28 @@ def optimized_fuzzy_groups(df: pd.DataFrame, threshold: float, step_status=None)
 
     processed = 0
 
-    for bucket_value, bucket_indices in bucket_map.items():
+    for bucket_value in bucket_map.keys():
 
-        for pos_i, i in enumerate(bucket_indices):
+        # ---- NEW: allow neighbor buckets ----
+        candidate_buckets = [
+            bucket_value - 1,
+            bucket_value,
+            bucket_value + 1
+        ]
+
+        # Collect all indices from these buckets
+        candidate_indices = []
+        for cb in candidate_buckets:
+            candidate_indices.extend(bucket_map.get(cb, []))
+
+        # Remove duplicates while preserving order
+        seen = set()
+        candidate_indices = [
+            x for x in candidate_indices
+            if not (x in seen or seen.add(x))
+        ]
+
+        for pos_i, i in enumerate(candidate_indices):
 
             if st.session_state.abort:
                 break
@@ -278,7 +297,7 @@ def optimized_fuzzy_groups(df: pd.DataFrame, threshold: float, step_status=None)
             if i in used:
                 continue
 
-            # Progress feedback (approximate global progress)
+            # Progress feedback
             if step_status and (processed % 10 == 0 or processed == n - 1):
                 step_status.write(
                     f"{T.get('dup_progress','Detecting duplicates')}… {processed+1}/{n}"
@@ -288,14 +307,14 @@ def optimized_fuzzy_groups(df: pd.DataFrame, threshold: float, step_status=None)
             len1 = lengths[i]
             group = [i]
 
-            for j in bucket_indices[pos_i + 1:]:
+            for j in candidate_indices[pos_i + 1:]:
 
                 if j in used:
                     continue
 
                 len2 = lengths[j]
 
-                # Original ±20% length filter
+                # original ±20% length filter
                 if abs(len1 - len2) / max(len1, len2) > 0.2:
                     continue
 
@@ -727,6 +746,7 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
 
 
 
