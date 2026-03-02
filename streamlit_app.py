@@ -330,7 +330,8 @@ def optimized_fuzzy_groups(df: pd.DataFrame, threshold: float, step_status=None)
 
     df["dup_size"] = 1
     for rep_idx, size in group_sizes.items():
-        df.loc[rep_idx, "dup_size"] = size
+    member_indices = df.index[df["comment_id"].astype(str).isin(group_ids[rep_idx])]
+    df.loc[member_indices, "dup_size"] = size
 
     return group_sizes, group_ids
 # =========================================================
@@ -747,6 +748,7 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
 
 
 
