@@ -25,6 +25,12 @@ TRANSLATIONS = {
             "proposals (e.g. addition, deletion, modification). "
             "Matching is rule-based and applied on normalized text."
         ),
+        "similarity_threshold_help": (
+            "Minimum similarity percentage required for two comments "
+            "to be grouped as duplicates in fuzzy mode. "
+            "Higher values detect stricter template copies; "
+            "lower values group more loosely similar variations."
+        ),
 
         # --- Runtime ---
         "scraping": "Scraping and collecting comments...",
@@ -150,6 +156,12 @@ TRANSLATIONS = {
             "για τον εντοπισμό ρητών προτάσεων τροποποίησης "
             "(π.χ. προσθήκη, διαγραφή, αντικατάσταση). "
             "Η ανίχνευση βασίζεται σε κανόνες και εφαρμόζεται στο κανονικοποιημένο κείμενο."
+        ),
+        "similarity_threshold_help": (
+            "Ελάχιστο ποσοστό ομοιότητας που απαιτείται ώστε δύο σχόλια "
+            "να ομαδοποιηθούν ως διπλότυπα στη λειτουργία προσεγγιστικής ταύτισης. "
+            "Υψηλότερες τιμές εντοπίζουν αυστηρότερες αντιγραφές template, "
+            "ενώ χαμηλότερες τιμές ομαδοποιούν πιο χαλαρές παραλλαγές."
         ),
 
         # --- Runtime ---
