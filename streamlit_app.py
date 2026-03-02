@@ -4,6 +4,7 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import numpy as np
 import re
+import unicodedata
 import time
 import matplotlib.pyplot as plt
 from scipy.stats import gaussian_kde
@@ -128,29 +129,26 @@ def render_steps(placeholder, steps, active_idx, done_set):
 # TEXT CANONICALIZATION (FOR DUPLICATE DETECTION)
 # =========================================================
 
-def canonicalize_text(text: str) -> str:
-    """
-    Produces a canonical version of the comment text
-    for duplicate detection purposes.
-
-    Removes:
-    - trailing numeric ID blocks
-    - '+X more' tails
-    - excessive whitespace
-    """
-
-    if not isinstance(text, str):
+def canonicalize(text: str) -> str:
+    if not text:
         return ""
 
-    text = text.lower().strip()
+    # Unicode normalization (decompose accents)
+    text = unicodedata.normalize("NFD", text)
 
-    # remove trailing lines containing only numbers (IDs)
-    text = re.sub(r"\n?\s*(\d+\s+)+\d+\s*", "", text)
+    # Remove diacritics (accents)
+    text = "".join(
+        char for char in text
+        if unicodedata.category(char) != "Mn"
+    )
 
-    # remove '+X more' fragments
-    text = re.sub(r"\+?\d+\s*more", "", text)
+    # Lowercase
+    text = text.lower()
 
-    # normalize whitespace
+    # Remove punctuation (keep letters and numbers)
+    text = re.sub(r"[^\w\s]", " ", text)
+
+    # Collapse multiple whitespace
     text = re.sub(r"\s+", " ", text)
 
     return text.strip()
@@ -722,6 +720,7 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
 
 
 
