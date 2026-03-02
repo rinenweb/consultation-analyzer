@@ -350,6 +350,7 @@ if run_button and url_input:
         st.stop()
 
     # --- Abort button (visible ONLY while running)
+    if st.session_state.running:
     col_run, col_abort = st.columns([10, 1])
     with col_abort:
         if st.button(T.get("abort", "Abort")):
@@ -746,6 +747,7 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
 
 
 
