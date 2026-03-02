@@ -14,6 +14,17 @@ TRANSLATIONS = {
         "advanced": "Advanced Settings",
         "policy": "Policy keywords (comma separated)",
         "amend": "Amendment verbs (comma separated)",
+        # --- Advanced tooltips ---
+        "policy_help": (
+            "Comma-separated keyword fragments used to detect references "
+            "to specific articles, legal provisions or policy domains. "
+            "Matching is pattern-based and applied on normalized text."
+        ),
+        "amend_help": (
+            "Comma-separated verb fragments used to detect explicit amendment "
+            "proposals (e.g. addition, deletion, modification). "
+            "Matching is rule-based and applied on normalized text."
+        ),
 
         # --- Runtime ---
         "scraping": "Scraping and collecting comments...",
@@ -128,6 +139,18 @@ TRANSLATIONS = {
         "advanced": "Προχωρημένες Ρυθμίσεις",
         "policy": "Λέξεις πολιτικής (διαχωρισμένες με κόμμα)",
         "amend": "Ρήματα τροποποίησης (διαχωρισμένα με κόμμα)",
+        "policy_help": (
+            "Λέξεις-κλειδιά (τμήματα λέξεων) διαχωρισμένες με κόμμα, "
+            "που χρησιμοποιούνται για τον εντοπισμό αναφορών σε άρθρα, "
+            "νομοθετικές διατάξεις ή θεματικά πεδία πολιτικής. "
+            "Η ανίχνευση βασίζεται σε κανόνες και εφαρμόζεται στο κανονικοποιημένο κείμενο."
+        ),
+        "amend_help": (
+            "Ρηματικά τμήματα διαχωρισμένα με κόμμα που χρησιμοποιούνται "
+            "για τον εντοπισμό ρητών προτάσεων τροποποίησης "
+            "(π.χ. προσθήκη, διαγραφή, αντικατάσταση). "
+            "Η ανίχνευση βασίζεται σε κανόνες και εφαρμόζεται στο κανονικοποιημένο κείμενο."
+        ),
 
         # --- Runtime ---
         "scraping": "Συλλογή και ανάλυση σχολίων...",
