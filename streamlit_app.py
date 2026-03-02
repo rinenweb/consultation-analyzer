@@ -129,26 +129,17 @@ def render_steps(placeholder, steps, active_idx, done_set):
 # TEXT CANONICALIZATION (FOR DUPLICATE DETECTION)
 # =========================================================
 
-def canonicalize(text: str) -> str:
+def canonicalize_text(text: str) -> str:
     if not text:
         return ""
 
-    # Unicode normalization (decompose accents)
     text = unicodedata.normalize("NFD", text)
-
-    # Remove diacritics (accents)
     text = "".join(
         char for char in text
         if unicodedata.category(char) != "Mn"
     )
-
-    # Lowercase
     text = text.lower()
-
-    # Remove punctuation (keep letters and numbers)
     text = re.sub(r"[^\w\s]", " ", text)
-
-    # Collapse multiple whitespace
     text = re.sub(r"\s+", " ", text)
 
     return text.strip()
@@ -720,6 +711,7 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
 
 
 
