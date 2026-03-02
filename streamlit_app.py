@@ -351,13 +351,13 @@ if run_button and url_input:
 
     # --- Abort button (visible ONLY while running)
     if st.session_state.running:
-    col_run, col_abort = st.columns([10, 1])
-    with col_abort:
-        if st.button(T.get("abort", "Abort")):
-            st.session_state.abort = True
-            st.session_state.running = False
-            st.warning(T.get("aborted_msg", "Aborted."))
-            st.stop()
+        col_run, col_abort = st.columns([10, 1])
+        with col_abort:
+            if st.button(T.get("abort", "Abort")):
+                st.session_state.abort = True
+                st.session_state.running = False
+                st.warning(T.get("aborted_msg", "Aborted."))
+                st.stop()
 
     # --- Scraping message (will be cleared later)
     scrape_msg = st.empty()
@@ -747,6 +747,7 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
 
 
 
