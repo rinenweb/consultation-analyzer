@@ -23,6 +23,14 @@ TRANSLATIONS = {
         "abort": "Abort",
         "no_comments": "No comments found or scraping aborted.",
 
+        # --- Pipeline Steps ---
+        "step_scrape": "Scraping chapters & comments",
+        "step_normalize": "Normalizing text",
+        "step_duplicates": "Detecting duplicates",
+        "step_strict": "Calculating strict layer",
+        "step_stats": "Computing statistics",
+        "step_render": "Preparing outputs",
+
         # --- Duplicate Detection ---
         "duplicate_method_label": "Duplicate detection method",
         "duplicate_templates": "Duplicate Templates",
@@ -128,6 +136,14 @@ TRANSLATIONS = {
         "completed": "Η ανάλυση ολοκληρώθηκε.",
         "abort": "Ακύρωση",
         "no_comments": "Δεν βρέθηκαν σχόλια ή η διαδικασία ακυρώθηκε.",
+
+        # --- Βήματα Ανάλυσης ---
+        "step_scrape": "Ανάκτηση κεφαλαίων & σχολίων",
+        "step_normalize": "Κανονικοποίηση κειμένου",
+        "step_duplicates": "Εντοπισμός διπλότυπων",
+        "step_strict": "Υπολογισμός strict layer",
+        "step_stats": "Υπολογισμός στατιστικών",
+        "step_render": "Προετοιμασία αποτελεσμάτων",
 
         # --- Duplicate Detection ---
         "duplicate_method_label": "Μέθοδος εντοπισμού διπλότυπων",
