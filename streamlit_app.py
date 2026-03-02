@@ -242,13 +242,13 @@ def scrape_consultation_with_progress(parent_id: str, base: str):
     return pd.DataFrame(all_rows), chapters
 
 # =========================================================
-# DUPLICATE DETECTION (FAST FUZZY + OPTIONAL PROGRESS)
+# DUPLICATE DETECTION (FAST FUZZY + PROGRESS)
 # =========================================================
 
 def optimized_fuzzy_groups(df: pd.DataFrame, threshold: float, step_status=None):
     """
     Bucketed length-based fuzzy grouping with neighbor-bucket tolerance (b-1, b, b+1).
-    Keeps original grouping logic intact.
+    Uses clean percentage progress bar.
     """
 
     texts = df["text_clean"].tolist()
@@ -258,31 +258,27 @@ def optimized_fuzzy_groups(df: pd.DataFrame, threshold: float, step_status=None)
     group_sizes = {}
     group_ids = {}
     used = set()
+    processed_reps = set()
 
     n = len(texts)
+
+    # Progress bar
+    progress_bar = st.progress(0.0)
 
     # Map bucket -> list of indices
     bucket_map = {}
     for idx, b in enumerate(buckets):
         bucket_map.setdefault(b, []).append(idx)
 
-    processed = 0
-
     for bucket_value in bucket_map.keys():
 
-        # ---- NEW: allow neighbor buckets ----
-        candidate_buckets = [
-            bucket_value - 1,
-            bucket_value,
-            bucket_value + 1
-        ]
+        candidate_buckets = [bucket_value - 1, bucket_value, bucket_value + 1]
 
-        # Collect all indices from these buckets
         candidate_indices = []
         for cb in candidate_buckets:
             candidate_indices.extend(bucket_map.get(cb, []))
 
-        # Remove duplicates while preserving order
+        # deduplicate candidate list
         seen = set()
         candidate_indices = [
             x for x in candidate_indices
@@ -292,16 +288,17 @@ def optimized_fuzzy_groups(df: pd.DataFrame, threshold: float, step_status=None)
         for pos_i, i in enumerate(candidate_indices):
 
             if st.session_state.abort:
-                break
+                progress_bar.empty()
+                return {}, {}
 
-            if i in used:
+            if i in used or i in processed_reps:
                 continue
 
-            # Progress feedback
-            if step_status and (processed % 10 == 0 or processed == n - 1):
-                step_status.write(
-                    f"{T.get('dup_progress','Detecting duplicates')}… {processed+1}/{n}"
-                )
+            processed_reps.add(i)
+
+            # ---- CLEAN PROGRESS ----
+            progress = len(processed_reps) / n
+            progress_bar.progress(min(progress, 1.0))
 
             t1 = texts[i]
             len1 = lengths[i]
@@ -314,7 +311,6 @@ def optimized_fuzzy_groups(df: pd.DataFrame, threshold: float, step_status=None)
 
                 len2 = lengths[j]
 
-                # original ±20% length filter
                 if abs(len1 - len2) / max(len1, len2) > 0.2:
                     continue
 
@@ -326,7 +322,7 @@ def optimized_fuzzy_groups(df: pd.DataFrame, threshold: float, step_status=None)
                 group_sizes[i] = len(group)
                 group_ids[i] = df.loc[group, "comment_id"].astype(str).tolist()
 
-            processed += 1
+    progress_bar.empty()
 
     df["dup_size"] = 1
     for rep_idx, size in group_sizes.items():
@@ -746,6 +742,7 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
 
 
 
