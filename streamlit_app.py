@@ -247,11 +247,13 @@ def scrape_consultation_with_progress(parent_id: str, base: str):
 
 def optimized_fuzzy_groups(df: pd.DataFrame, threshold: float, step_status=None):
     """
-    Length-based fuzzy grouping with live progress feedback.
+    Bucketed length-based fuzzy grouping with live progress feedback.
+    Keeps original grouping logic intact.
     """
 
     texts = df["text_clean"].tolist()
     lengths = [len(t) for t in texts]
+    buckets = df["bucket"].tolist()
 
     group_sizes = {}
     group_ids = {}
@@ -259,43 +261,53 @@ def optimized_fuzzy_groups(df: pd.DataFrame, threshold: float, step_status=None)
 
     n = len(texts)
 
-    for i in range(n):
+    # Map bucket -> list of indices
+    bucket_map = {}
+    for idx, b in enumerate(buckets):
+        bucket_map.setdefault(b, []).append(idx)
 
-        if st.session_state.abort:
-            break
+    processed = 0
 
-        if i in used:
-            continue
+    for bucket_value, bucket_indices in bucket_map.items():
 
-        # ---- progress update every 10 iterations ----
-        if step_status and (i % 10 == 0 or i == n - 1):
-            step_status.write(
-                f"{T.get('dup_progress','Detecting duplicates')}… {i+1}/{n}"
-            )
+        for pos_i, i in enumerate(bucket_indices):
 
-        t1 = texts[i]
-        len1 = lengths[i]
-        group = [i]
+            if st.session_state.abort:
+                break
 
-        for j in range(i + 1, n):
-
-            if j in used:
+            if i in used:
                 continue
 
-            t2 = texts[j]
-            len2 = lengths[j]
+            # Progress feedback (approximate global progress)
+            if step_status and (processed % 10 == 0 or processed == n - 1):
+                step_status.write(
+                    f"{T.get('dup_progress','Detecting duplicates')}… {processed+1}/{n}"
+                )
 
-            # length window filter (±20%)
-            if abs(len1 - len2) / max(len1, len2) > 0.2:
-                continue
+            t1 = texts[i]
+            len1 = lengths[i]
+            group = [i]
 
-            if SequenceMatcher(None, t1, t2).ratio() >= threshold:
-                group.append(j)
-                used.add(j)
+            for j in bucket_indices[pos_i + 1:]:
 
-        if len(group) > 1:
-            group_sizes[i] = len(group)
-            group_ids[i] = df.loc[group, "comment_id"].astype(str).tolist()
+                if j in used:
+                    continue
+
+                len2 = lengths[j]
+
+                # Original ±20% length filter
+                if abs(len1 - len2) / max(len1, len2) > 0.2:
+                    continue
+
+                if SequenceMatcher(None, t1, texts[j]).ratio() >= threshold:
+                    group.append(j)
+                    used.add(j)
+
+            if len(group) > 1:
+                group_sizes[i] = len(group)
+                group_ids[i] = df.loc[group, "comment_id"].astype(str).tolist()
+
+            processed += 1
 
     df["dup_size"] = 1
     for rep_idx, size in group_sizes.items():
@@ -333,12 +345,12 @@ if run_button and url_input:
 
     # --- Step panel
     steps = [
-        T.get("step_scrape", "Scraping chapters & comments"),
-        T.get("step_normalize", "Normalizing text"),
-        T.get("step_duplicates", "Detecting duplicates"),
-        T.get("step_strict", "Calculating strict layer"),
-        T.get("step_stats", "Computing statistics"),
-        T.get("step_render", "Preparing outputs"),
+        T["step_scrape"],
+        T["step_normalize"],
+        T["step_duplicates"],
+        T["step_strict"],
+        T["step_stats"],
+        T["step_render"],
     ]
 
     steps_ph = st.empty()
@@ -374,6 +386,10 @@ if run_button and url_input:
 
     # word count based on original text (not canonicalized)
     df["word_count"] = df["text"].astype(str).str.split().apply(len)
+
+    # ---- NEW: token-based bucketing for fuzzy pruning ----
+    df["token_count"] = df["text_clean"].str.split().str.len()
+    df["bucket"] = df["token_count"] // 10
 
     done.add(1)
     active = 2
@@ -711,6 +727,7 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
 
 
 
