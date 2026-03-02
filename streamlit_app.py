@@ -54,11 +54,14 @@ url_input = st.text_input(T["input_label"])
 with st.expander(T["advanced"]):
     policy_keywords_input = st.text_area(
         T["policy"],
-        "άρθρ,συνταγμ,οδηγ,ευρωπαϊκ,εε,ενωσιακ"
+        "άρθρ,συνταγμ,οδηγ,ευρωπαϊκ,εε,ενωσιακ",
+        help=T["policy_help"]
     )
+    
     amendment_keywords_input = st.text_area(
         T["amend"],
-        "να προστεθ,να διαγραφ,να αντικατασταθ,να τροποποιηθ"
+        "να προστεθ,να διαγραφ,να αντικατασταθ,να τροποποιηθ",
+        help=T["amend_help"]
     )
 
     duplicate_method = st.radio(
@@ -72,7 +75,8 @@ with st.expander(T["advanced"]):
     if duplicate_method == T["fuzzy_match"]:
         similarity_threshold = st.slider(
             T["similarity_threshold"],
-            80, 100, 90
+            80, 100, 90,
+            help=T["similarity_threshold_help"]
         )
 
 run_button = st.button(T["run"])
@@ -742,6 +746,7 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
 
 
 
