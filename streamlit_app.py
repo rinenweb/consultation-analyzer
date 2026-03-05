@@ -675,7 +675,7 @@ if st.session_state.results and not st.session_state.running:
 
                 st.markdown("---")
 
-            with st.expander(
+        with st.expander(
             T.get("targeted_layer_title", "Targeted Legislative Intervention Layer"),
             expanded=False
             ):
@@ -723,7 +723,7 @@ if st.session_state.results and not st.session_state.running:
                             f"[{T.get('open_comment','Open original comment')}]({comment_url})"
                         )
 
-            st.markdown("---")
+                    st.markdown("---")
 
     # --- KDE PLOT ---
     if len(df) > 1:
@@ -870,6 +870,7 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
 
 
 
