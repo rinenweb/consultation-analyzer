@@ -80,6 +80,12 @@ TRANSLATIONS = {
         "Number of distinct repeated comment texts (templates). "
         "Each template is counted once, regardless of how many times it appears."
         ),
+        "targeted_layer_title": "Targeted Legislative Intervention Layer",
+        "targeted_comments_detected": "targeted comments detected",
+        "no_targeted": "No targeted legislative intervention comments detected.",
+        "chapter": "Chapter",
+        "article": "Article",
+        "open_comment": "Open original comment",
 
         # --- Export buttons ---
         "export_comments_csv": "Export comments (CSV)",
@@ -213,6 +219,12 @@ TRANSLATIONS = {
             "Αριθμός διαφορετικών επαναλαμβανόμενων κειμένων (templates). "
             "Κάθε template μετράται μία φορά, ανεξάρτητα από το πλήθος εμφανίσεων."
         ),
+        "targeted_layer_title": "Στρώμα Στοχευμένης Νομοθετικής Παρέμβασης",
+        "targeted_comments_detected": "στοχευμένα σχόλια εντοπίστηκαν",
+        "no_targeted": "Δεν εντοπίστηκαν σχόλια στο στρώμα στοχευμένης παρέμβασης.",
+        "chapter": "Κεφάλαιο",
+        "article": "Άρθρο",
+        "open_comment": "Άνοιγμα πρωτότυπου σχολίου",
 
         # --- Export buttons ---
         "export_comments_csv": "Εξαγωγή σχολίων (CSV)",
