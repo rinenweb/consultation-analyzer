@@ -561,6 +561,49 @@ if st.session_state.results and not st.session_state.running:
     df = R["df"]
     base = R["base"]
 
+    chapters_df = pd.DataFrame(R.get("chapters", []))
+
+    chapter_title_map = {}
+    if not chapters_df.empty and "pid" in chapters_df.columns:
+        chapter_title_map = dict(zip(chapters_df["pid"], chapters_df["title"]))
+    
+    # Strict intervention layer
+    strict_mask = df.get("mentions_article", False) & df.get("mentions_amendment", False)
+    targeted_df = df.loc[strict_mask].copy()
+    
+    def extract_article_ref(text_clean):
+        if not text_clean:
+            return None
+    
+        m = re.search(r"\bαρθρ(?:ο|ου)?\s*(\d{1,3})\b", text_clean)
+        if m:
+            return m.group(1)
+    
+        m = re.search(r"\bαρθ\.\s*(\d{1,3})\b", text_clean)
+        if m:
+            return m.group(1)
+    
+        return None
+    
+    if not targeted_df.empty:
+    
+        targeted_df["chapter_title"] = targeted_df["chapter_p"].map(chapter_title_map).fillna("")
+        targeted_df["article_ref"] = targeted_df["text_clean"].apply(extract_article_ref)
+    
+        targeted_df["comment_url"] = targeted_df["comment_id"].astype(str).apply(
+            lambda cid: build_comment_link(base, cid)
+        )
+    
+        targeted_df = targeted_df.sort_values(
+            ["article_ref", "word_count"],
+            ascending=[False, False]
+        )
+    
+        targeted_records = targeted_df.to_dict("records")
+    
+    else:
+        targeted_records = []
+
     # --- CORE METRICS ---
     c1, c2, c3, c4 = st.columns(4)
     
@@ -631,6 +674,56 @@ if st.session_state.results and not st.session_state.running:
                             st.caption(f"+{more} more")
 
                 st.markdown("---")
+
+        with st.expander(
+        T.get("targeted_layer_title", "Targeted Legislative Intervention Layer"),
+        expanded=False
+    ):
+    
+        if not targeted_records:
+            st.info(
+                T.get(
+                    "no_targeted",
+                    "No targeted legislative intervention comments detected."
+                )
+            )
+    
+        else:
+    
+            st.caption(
+                f"{len(targeted_records)} "
+                + T.get("targeted_comments_detected", "comments detected")
+            )
+    
+            for rec in targeted_records[:20]:
+    
+                chapter_title = rec.get("chapter_title", "")
+                chapter_pid = rec.get("chapter_p", "")
+                article_ref = rec.get("article_ref")
+                comment_url = rec.get("comment_url")
+                text = rec.get("text", "")
+    
+                header = []
+    
+                if chapter_title:
+                    header.append(f"**{T.get('chapter','Chapter')}:** {chapter_title}")
+                else:
+                    header.append(f"**{T.get('chapter','Chapter')}:** p={chapter_pid}")
+    
+                if article_ref:
+                    header.append(f"**{T.get('article','Article')}:** {article_ref}")
+    
+                st.markdown(" • ".join(header))
+    
+                preview = text[:500] + ("..." if len(text) > 500 else "")
+                st.write(preview)
+    
+                if comment_url:
+                    st.markdown(
+                        f"[{T.get('open_comment','Open original comment')}]({comment_url})"
+                    )
+
+            st.markdown("---")
 
     # --- KDE PLOT ---
     if len(df) > 1:
@@ -777,6 +870,7 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
 
 
 
