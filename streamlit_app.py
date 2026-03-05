@@ -675,53 +675,53 @@ if st.session_state.results and not st.session_state.running:
 
                 st.markdown("---")
 
-        with st.expander(
-        T.get("targeted_layer_title", "Targeted Legislative Intervention Layer"),
-        expanded=False
-    ):
-    
-        if not targeted_records:
-            st.info(
-                T.get(
-                    "no_targeted",
-                    "No targeted legislative intervention comments detected."
-                )
-            )
-    
-        else:
-    
-            st.caption(
-                f"{len(targeted_records)} "
-                + T.get("targeted_comments_detected", "comments detected")
-            )
-    
-            for rec in targeted_records[:20]:
-    
-                chapter_title = rec.get("chapter_title", "")
-                chapter_pid = rec.get("chapter_p", "")
-                article_ref = rec.get("article_ref")
-                comment_url = rec.get("comment_url")
-                text = rec.get("text", "")
-    
-                header = []
-    
-                if chapter_title:
-                    header.append(f"**{T.get('chapter','Chapter')}:** {chapter_title}")
-                else:
-                    header.append(f"**{T.get('chapter','Chapter')}:** p={chapter_pid}")
-    
-                if article_ref:
-                    header.append(f"**{T.get('article','Article')}:** {article_ref}")
-    
-                st.markdown(" • ".join(header))
-    
-                preview = text[:500] + ("..." if len(text) > 500 else "")
-                st.write(preview)
-    
-                if comment_url:
-                    st.markdown(
-                        f"[{T.get('open_comment','Open original comment')}]({comment_url})"
+            with st.expander(
+            T.get("targeted_layer_title", "Targeted Legislative Intervention Layer"),
+            expanded=False
+            ):
+        
+            if not targeted_records:
+                st.info(
+                    T.get(
+                        "no_targeted",
+                        "No targeted legislative intervention comments detected."
                     )
+                )
+        
+            else:
+        
+                st.caption(
+                    f"{len(targeted_records)} "
+                    + T.get("targeted_comments_detected", "comments detected")
+                )
+        
+                for rec in targeted_records[:20]:
+        
+                    chapter_title = rec.get("chapter_title", "")
+                    chapter_pid = rec.get("chapter_p", "")
+                    article_ref = rec.get("article_ref")
+                    comment_url = rec.get("comment_url")
+                    text = rec.get("text", "")
+        
+                    header = []
+        
+                    if chapter_title:
+                        header.append(f"**{T.get('chapter','Chapter')}:** {chapter_title}")
+                    else:
+                        header.append(f"**{T.get('chapter','Chapter')}:** p={chapter_pid}")
+        
+                    if article_ref:
+                        header.append(f"**{T.get('article','Article')}:** {article_ref}")
+        
+                    st.markdown(" • ".join(header))
+        
+                    preview = text[:500] + ("..." if len(text) > 500 else "")
+                    st.write(preview)
+        
+                    if comment_url:
+                        st.markdown(
+                            f"[{T.get('open_comment','Open original comment')}]({comment_url})"
+                        )
 
             st.markdown("---")
 
@@ -870,6 +870,7 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
 
 
 
