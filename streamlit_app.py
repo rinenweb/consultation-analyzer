@@ -86,7 +86,7 @@ with st.expander(T["advanced"]):
             help=T["similarity_threshold_help"]
         )
         if similarity_threshold == 100:
-        st.info(T["fuzzy_100_hint"])
+            st.info(T["fuzzy_100_hint"])
 
 run_button = st.button(T["run"])
 
