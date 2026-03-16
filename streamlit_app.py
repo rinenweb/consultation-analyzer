@@ -57,6 +57,13 @@ with st.expander(T["advanced"]):
         "άρθρ,συνταγμ,οδηγ,ευρωπαϊκ,εε,ενωσιακ,παράγραφ,εδάφ,περίπτωσ,διάταξ,διατύπωσ,νομοτεχν",
         help=T["policy_help"]
     )
+    legislative_logic = st.selectbox(
+        T["legislative_logic_label"],
+        [T["logic_and"], T["logic_or"]],
+        index=0,
+        help=T["legislative_logic_help"]
+    )
+    st.caption(T["logic_and_desc"] if legislative_logic == T["logic_and"] else T["logic_or_desc"])
     
     amendment_keywords_input = st.text_area(
         T["amend"],
@@ -499,8 +506,12 @@ if run_button and url_input:
     else:
         df["mentions_amendment"] = False
 
-    strict_layer = round((df["mentions_article"] & df["mentions_amendment"]).mean() * 100, 2)
-
+    if legislative_logic == T["logic_or"]:
+        strict_mask = df["mentions_article"] | df["mentions_amendment"]
+    else:
+        strict_mask = df["mentions_article"] & df["mentions_amendment"]
+    
+    strict_layer = round(strict_mask.mean() * 100, 2)
     done.add(3)
     active = 4
     render_steps(steps_ph, steps, active, done)
@@ -529,6 +540,7 @@ if run_button and url_input:
         "amendment_keywords": amendment_keywords_input,
         "campaign_share": campaign_share,
         "duplicate_templates": duplicate_templates,
+        "legislative_logic": legislative_logic,
         "strict_layer": strict_layer,
         "mean": mean,
         "median": median,
@@ -568,7 +580,11 @@ if st.session_state.results and not st.session_state.running:
         chapter_title_map = dict(zip(chapters_df["pid"], chapters_df["title"]))
     
     # Strict intervention layer
-    strict_mask = df.get("mentions_article", False) & df.get("mentions_amendment", False)
+    if R.get("legislative_logic") == T["logic_or"]:
+        strict_mask = df.get("mentions_article", False) | df.get("mentions_amendment", False)
+    else:
+        strict_mask = df.get("mentions_article", False) & df.get("mentions_amendment", False)
+    
     targeted_df = df.loc[strict_mask].copy()
     
     if not targeted_df.empty:
@@ -589,6 +605,21 @@ if st.session_state.results and not st.session_state.running:
     else:
         targeted_records = []
 
+        if R.get("legislative_logic") == T["logic_or"]:
+            layer_metric_label = T.get("broad", "Broad Legislative Relevance Layer (%)")
+            layer_metric_desc = T.get(
+                "broad_desc",
+                "Percentage of comments containing either a policy/article reference or an explicit amendment proposal."
+            )
+            layer_section_title = T.get("broad_layer_title", "Broad Legislative Relevance Layer")
+        else:
+            layer_metric_label = T.get("strict", "Strict Legislative Layer (%)")
+            layer_metric_desc = T.get(
+                "strict_desc",
+                "Percentage of comments containing both an article reference and an explicit amendment proposal."
+            )
+            layer_section_title = T.get("targeted_layer_title", "Targeted Legislative Intervention Layer")
+
     # --- CORE METRICS ---
     c1, c2, c3, c4 = st.columns(4)
     
@@ -604,9 +635,9 @@ if st.session_state.results and not st.session_state.running:
         help=T["duplicate_templates_help"]
     )
     c4.metric(
-        T.get("strict", "Strict Layer"),
+        layer_metric_label,
         R["strict_layer"],
-        help=T.get("strict_desc", None)
+        help=layer_metric_desc
     )
 
     # --- TEXT STATISTICS ---
@@ -671,10 +702,7 @@ if st.session_state.results and not st.session_state.running:
                 
                 st.markdown("---")
 
-        with st.expander(
-            T.get("targeted_layer_title", "Targeted Legislative Intervention Layer"),
-            expanded=False
-            ):
+        with st.expander(layer_section_title, expanded=False):
         
             if not targeted_records:
                 st.info(
@@ -748,8 +776,10 @@ if st.session_state.results and not st.session_state.running:
             export_df[col] = False
     
     export_df["is_duplicate"] = export_df.get("dup_size", 1) > 1
-    export_df["strict_flag"] = export_df.get("mentions_article", False) & export_df.get("mentions_amendment", False)
-    
+    if R.get("legislative_logic") == T["logic_or"]:
+        export_df["strict_flag"] = export_df.get("mentions_article", False) | export_df.get("mentions_amendment", False)
+    else:
+        export_df["strict_flag"] = export_df.get("mentions_article", False) & export_df.get("mentions_amendment", False)    
     # stable column order
     cols_order = [
         "chapter_p", "comment_id", "text",
@@ -781,6 +811,7 @@ if st.session_state.results and not st.session_state.running:
         "similarity_threshold": R.get("similarity_threshold"),
         "campaign_share_pct": float(R.get("campaign_share")),
         "duplicate_templates": int(R.get("duplicate_templates")),
+        "legislative_logic": R.get("legislative_logic"),
         "strict_layer_pct": float(R.get("strict_layer")),
         "policy_keywords": R.get("policy_keywords"),
         "amendment_keywords": R.get("amendment_keywords"),
@@ -827,6 +858,7 @@ if st.session_state.results and not st.session_state.running:
         if R["duplicate_method"] == T["fuzzy_match"]:
             st.write(T.get("similarity_threshold","Similarity threshold (%)") + ":", R["similarity_threshold"])
         st.write(T.get("policy","Policy keywords") + ":", R["policy_keywords"])
+        st.write(T.get("legislative_logic_label","Legislative matching logic") + ":", R.get("legislative_logic", T["logic_and"]))
         st.write(T.get("amend","Amendment verbs") + ":", R["amendment_keywords"])
         st.write(T.get("timestamp","Run timestamp") + ":", R["timestamp"])
 
