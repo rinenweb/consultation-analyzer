@@ -650,11 +650,33 @@ if st.session_state.results and not st.session_state.running:
                 preview = full_text[:preview_len]
                 rest = full_text[preview_len:]
                 
-                st.write(preview + ("..." if rest else ""))
+                state_key = f"expand_template_{key}"
                 
-                if rest:
-                    if st.button(T.get("show_more", "show more"), key=f"show_{count_int}"):
-                        st.write(rest)
+                if state_key not in st.session_state:
+                    st.session_state[state_key] = False
+                
+                if not st.session_state[state_key]:
+                
+                    if rest:
+                        st.markdown(
+                            f"{preview}... "
+                            f"<a href='#' onclick=\"window.parent.postMessage({{'isStreamlitMessage': true, 'type': 'streamlit:setComponentValue', 'value': '{state_key}' }}, '*')\">"
+                            f"{T.get('show_more','show more')}</a>",
+                            unsafe_allow_html=True
+                        )
+                    else:
+                        st.write(full_text)
+                
+                    if st.button(T.get("show_more","show more"), key=f"{state_key}_btn"):
+                        st.session_state[state_key] = True
+                
+                else:
+                
+                    st.write(full_text)
+                
+                    if st.button(T.get("show_less","show less"), key=f"{state_key}_btn_less"):
+                        st.session_state[state_key] = False
+                
                 
                 ids = [str(x) for x in ids if str(x).strip()]
                 to_show = ids[:10]
