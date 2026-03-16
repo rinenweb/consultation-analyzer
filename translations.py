@@ -51,8 +51,8 @@ TRANSLATIONS = {
         # --- Duplicate Detection ---
         "duplicate_method_label": "Duplicate detection method",
         "duplicate_templates": "Duplicate Templates",
-        "exact_match": "Exact match",
-        "fuzzy_match": "Fuzzy match",
+        "exact_match": "Exact match (recommended for strict duplicate detection)",
+        "fuzzy_match": "Fuzzy match (for near-duplicates)",
         "similarity_threshold": "Similarity threshold (%)",
 
         # --- Core Metrics ---
