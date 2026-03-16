@@ -87,6 +87,7 @@ TRANSLATIONS = {
         "article": "Article",
         "open_comment": "Open original comment",
         "of_total": "of total comments",
+        "show_more": "show entire comment",
 
         # --- Export buttons ---
         "export_comments_csv": "Export comments (CSV)",
@@ -227,6 +228,7 @@ TRANSLATIONS = {
         "article": "Άρθρο",
         "open_comment": "Άνοιγμα πρωτότυπου σχολίου",
         "of_total": "του συνόλου των σχολίων",
+        "show_more": "εμφάνιση ολόκληρου του σχολίου",
 
         # --- Export buttons ---
         "export_comments_csv": "Εξαγωγή σχολίων (CSV)",
