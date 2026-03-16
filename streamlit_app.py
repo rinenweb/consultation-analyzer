@@ -580,6 +580,21 @@ if st.session_state.results and not st.session_state.running:
     chapter_title_map = {}
     if not chapters_df.empty and "pid" in chapters_df.columns:
         chapter_title_map = dict(zip(chapters_df["pid"], chapters_df["title"]))
+
+    if R.get("legislative_logic") == T["logic_or"]:
+        layer_metric_label = T.get("broad", "Broad Legislative Relevance Layer (%)")
+        layer_metric_desc = T.get(
+            "broad_desc",
+            "Percentage of comments containing either a policy/article reference or an explicit amendment proposal."
+        )
+        layer_section_title = T.get("broad_layer_title", "Broad Legislative Relevance Layer")
+    else:
+        layer_metric_label = T.get("strict", "Strict Legislative Layer (%)")
+        layer_metric_desc = T.get(
+            "strict_desc",
+            "Percentage of comments containing both an article reference and an explicit amendment proposal."
+        )
+        layer_section_title = T.get("targeted_layer_title", "Targeted Legislative Intervention Layer")
     
     # Strict intervention layer
     if R.get("legislative_logic") == T["logic_or"]:
@@ -606,21 +621,6 @@ if st.session_state.results and not st.session_state.running:
     
     else:
         targeted_records = []
-
-        if R.get("legislative_logic") == T["logic_or"]:
-            layer_metric_label = T.get("broad", "Broad Legislative Relevance Layer (%)")
-            layer_metric_desc = T.get(
-                "broad_desc",
-                "Percentage of comments containing either a policy/article reference or an explicit amendment proposal."
-            )
-            layer_section_title = T.get("broad_layer_title", "Broad Legislative Relevance Layer")
-        else:
-            layer_metric_label = T.get("strict", "Strict Legislative Layer (%)")
-            layer_metric_desc = T.get(
-                "strict_desc",
-                "Percentage of comments containing both an article reference and an explicit amendment proposal."
-            )
-            layer_section_title = T.get("targeted_layer_title", "Targeted Legislative Intervention Layer")
 
     # --- CORE METRICS ---
     c1, c2, c3, c4 = st.columns(4)
@@ -704,7 +704,7 @@ if st.session_state.results and not st.session_state.running:
                 
                 st.markdown("---")
 
-        with st.expander(layer_section_title, expanded=False):
+    with st.expander(layer_section_title, expanded=False):
         
             if not targeted_records:
                 st.info(
