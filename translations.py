@@ -31,6 +31,16 @@ TRANSLATIONS = {
             "Higher values detect stricter template copies; "
             "lower values group more loosely similar variations."
         ),
+        "fuzzy_100_hint": "At 100%, fuzzy behaves like exact match but is slower.",
+        "legislative_logic_label": "Legislative matching logic",
+        "logic_and": "AND (strict)",
+        "logic_or": "OR (broad)",
+        "legislative_logic_help": "Choose whether a comment must contain both policy and amendment matches (AND) or either one of them (OR).",
+        "logic_and_desc": "AND is stricter and better for precision: it counts comments that combine a policy/legal reference with amendment intent, but it may miss some relevant comments.",
+        "logic_or_desc": "OR is broader and better for recall: it captures comments with either policy/legal reference or amendment intent, but it may include more noise and overcount substantive comments.",
+        "broad": "Broad Legislative Relevance Layer (%)",
+        "broad_desc": "Percentage of comments containing either a policy/article reference or an explicit amendment proposal.",
+        "broad_layer_title": "Broad Legislative Relevance Layer",
 
         # --- Runtime ---
         "scraping": "Scraping and collecting comments...",
@@ -171,6 +181,16 @@ TRANSLATIONS = {
             "Υψηλότερες τιμές εντοπίζουν αυστηρότερες αντιγραφές template, "
             "ενώ χαμηλότερες τιμές ομαδοποιούν πιο χαλαρές παραλλαγές."
         ),
+        "fuzzy_100_hint": "Στο 100%, το fuzzy λειτουργεί ουσιαστικά όπως το exact match, αλλά είναι πιο αργό.",
+        "legislative_logic_label": "Λογική συνδυασμού policy και amendment matches",
+        "logic_and": "AND (αυστηρό)",
+        "logic_or": "OR (ευρύ)",
+        "legislative_logic_help": "Επιλέξτε αν ένα σχόλιο πρέπει να περιέχει και policy και amendment match (AND) ή έστω ένα από τα δύο (OR).",
+        "logic_and_desc": "Το AND είναι αυστηρότερο και ταιριάζει καλύτερα όταν προέχει η ακρίβεια: μετρά σχόλια που συνδυάζουν αναφορά σε πολιτική/διάταξη με πρόθεση τροποποίησης, αλλά μπορεί να αφήσει εκτός κάποια σχετικά σχόλια.",
+        "logic_or_desc": "Το OR είναι πιο ευρύ και ταιριάζει καλύτερα όταν προέχει η ανάκληση: πιάνει σχόλια με policy/legal reference ή amendment intent, αλλά μπορεί να εισάγει περισσότερο θόρυβο και να υπερμετρήσει τα ουσιαστικά σχόλια.",
+        "broad": "Ευρύ Στρώμα Νομοθετικής Συνάφειας (%)",
+        "broad_desc": "Ποσοστό σχολίων που περιέχουν είτε αναφορά σε άρθρο/διάταξη είτε ρητή πρόταση τροποποίησης.",
+        "broad_layer_title": "Ευρύ Στρώμα Νομοθετικής Συνάφειας",
 
         # --- Runtime ---
         "scraping": "Εξαγωγή και ανάλυση σχολίων...",
