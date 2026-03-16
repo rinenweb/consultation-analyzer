@@ -54,7 +54,7 @@ url_input = st.text_input(T["input_label"])
 with st.expander(T["advanced"]):
     policy_keywords_input = st.text_area(
         T["policy"],
-        "άρθρ,συνταγμ,οδηγ,ευρωπαϊκ,εε,ενωσιακ",
+        "άρθρ,συνταγμ,οδηγ,ευρωπαϊκ,εε,ενωσιακ,παράγραφ,εδάφ,περίπτωσ,διάταξ,διατύπωσ,νομοτεχν",
         help=T["policy_help"]
     )
     
@@ -71,7 +71,7 @@ with st.expander(T["advanced"]):
         index=0
     )
 
-    similarity_threshold = 90
+    similarity_threshold = 80
     if duplicate_method == T["fuzzy_match"]:
         similarity_threshold = st.slider(
             T["similarity_threshold"],
