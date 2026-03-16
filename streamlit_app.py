@@ -646,22 +646,26 @@ if st.session_state.results and not st.session_state.running:
                     f"({percentage:.2f}% {T.get('of_total','of total comments')})**"
                 )
 
-                preview = full_text[:400] + ("..." if len(full_text) > 400 else "")
-                st.write(preview)
-
-                with st.expander(T.get("show_full_text", "Show full text")):
-                    st.write(full_text)
-
-                    ids = [str(x) for x in ids if str(x).strip()]
-                    to_show = ids[:10]
-                    more = len(ids) - len(to_show)
-
-                    if to_show:
-                        links = [f"[{cid}]({build_comment_link(base, cid)})" for cid in to_show]
-                        st.markdown(" ".join(links))
-                        if more > 0:
-                            st.caption(f"+{more} more")
-
+                preview_len = 400
+                preview = full_text[:preview_len]
+                rest = full_text[preview_len:]
+                
+                st.write(preview + ("..." if rest else ""))
+                
+                if rest:
+                    if st.button(T.get("show_more", "show more"), key=f"show_{count_int}"):
+                        st.write(rest)
+                
+                ids = [str(x) for x in ids if str(x).strip()]
+                to_show = ids[:10]
+                more = len(ids) - len(to_show)
+                
+                if to_show:
+                    links = [f"[{cid}]({build_comment_link(base, cid)})" for cid in to_show]
+                    st.markdown(" ".join(links))
+                    if more > 0:
+                        st.caption(f"+{more} more")
+                
                 st.markdown("---")
 
         with st.expander(
