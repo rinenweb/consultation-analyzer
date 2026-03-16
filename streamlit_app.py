@@ -639,8 +639,12 @@ if st.session_state.results and not st.session_state.running:
                     rep_idx = int(key)
                     full_text = df.loc[rep_idx, "text"]
                     ids = R["template_ids"].get(rep_idx, [])
-
-                st.markdown(f"**{T.get('occurrences','Occurrences')}: {count_int}**")
+                
+                percentage = (count_int / len(df)) * 100
+                st.markdown(
+                    f"**{T.get('occurrences','Occurrences')}: {count_int} "
+                    f"({percentage:.2f}% {T.get('of_total','of total comments')})**"
+                )
 
                 preview = full_text[:400] + ("..." if len(full_text) > 400 else "")
                 st.write(preview)
