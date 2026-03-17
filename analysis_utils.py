@@ -87,8 +87,6 @@ def scrape_consultation_timing(parent_id: str, base: str, session: requests.Sess
     r = session.get(f"{base}?p={parent_id}", timeout=25)
     soup = BeautifulSoup(r.text, "html5lib")
 
-    timing_box = soup.find("div", class_="sidespot red_spot")
-
     posted_raw = None
     closes_raw = None
     posted_dt = None
@@ -97,27 +95,42 @@ def scrape_consultation_timing(parent_id: str, base: str, session: requests.Sess
     duration_label = None
     duration_color = None
 
+    # πιο αξιόπιστο από το soup.find(... class_="sidespot red_spot")
+    timing_box = soup.select_one("div.sidespot.red_spot")
+
     if timing_box:
         spans = timing_box.find_all("span")
         if len(spans) >= 2:
             posted_raw = spans[0].get_text(" ", strip=True)
             closes_raw = spans[1].get_text(" ", strip=True)
 
-            posted_dt = parse_greek_datetime(posted_raw)
-            closes_dt = parse_greek_datetime(closes_raw)
+    # fallback: αν για κάποιο λόγο δεν βρέθηκαν spans στο box,
+    # ψάξε μέσα σε όλο το h4 του sidebar
+    if (not posted_raw or not closes_raw) and timing_box:
+        h4 = timing_box.find("h4")
+        if h4:
+            span_texts = [s.get_text(" ", strip=True) for s in h4.find_all("span")]
+            if len(span_texts) >= 2:
+                posted_raw = posted_raw or span_texts[0]
+                closes_raw = closes_raw or span_texts[1]
 
-            if posted_dt and closes_dt:
-                duration_days = round((closes_dt - posted_dt).total_seconds() / 86400, 2)
+    if posted_raw:
+        posted_dt = parse_greek_datetime(posted_raw)
+    if closes_raw:
+        closes_dt = parse_greek_datetime(closes_raw)
 
-                if duration_days < 14:
-                    duration_label = translations.get("duration_insufficient", "Insufficient duration")
-                    duration_color = "red"
-                elif duration_days < 21:
-                    duration_label = translations.get("duration_borderline", "Borderline duration")
-                    duration_color = "orange"
-                else:
-                    duration_label = translations.get("duration_satisfactory", "Satisfactory duration")
-                    duration_color = "green"
+    if posted_dt and closes_dt:
+        duration_days = round((closes_dt - posted_dt).total_seconds() / 86400, 2)
+
+        if duration_days < 14:
+            duration_label = translations.get("duration_insufficient", "Insufficient duration")
+            duration_color = "red"
+        elif duration_days < 21:
+            duration_label = translations.get("duration_borderline", "Borderline duration")
+            duration_color = "orange"
+        else:
+            duration_label = translations.get("duration_satisfactory", "Satisfactory duration")
+            duration_color = "green"
 
     return {
         "posted_raw": posted_raw,
