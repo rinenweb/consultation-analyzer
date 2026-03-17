@@ -488,67 +488,67 @@ if st.session_state.results and not st.session_state.running:
         st.pyplot(fig)
 
     timing = R.get("timing_info", {}) or {}
-duration_days = timing.get("duration_days")
-duration_label = timing.get("duration_label")
-duration_color = timing.get("duration_color")
-posted_raw = timing.get("posted_raw")
-closes_raw = timing.get("closes_raw")
+    duration_days = timing.get("duration_days")
+    duration_label = timing.get("duration_label")
+    duration_color = timing.get("duration_color")
+    posted_raw = timing.get("posted_raw")
+    closes_raw = timing.get("closes_raw")
 
-if duration_days is not None:
-    bg_map = {
-        "red": "#fde8e8",
-        "orange": "#fff4d6",
-        "green": "#e6f4ea",
-    }
-    border_map = {
-        "red": "#d93025",
-        "orange": "#f9ab00",
-        "green": "#188038",
-    }
-    text_map = {
-        "red": "#8b1e1e",
-        "orange": "#8a5a00",
-        "green": "#0f5c2e",
-    }
-
-    bg_color = bg_map.get(duration_color, "#f3f4f6")
-    border_color = border_map.get(duration_color, "#9ca3af")
-    text_color = text_map.get(duration_color, "#374151")
-
-    duration_display = (
-        f"{int(duration_days)}"
-        if float(duration_days).is_integer()
-        else f"{duration_days:.2f}"
-    )
-
-    tooltip_text = T.get("duration_tooltip", "").format(
-        posted=posted_raw or "-",
-        closes=closes_raw or "-",
-    )
-
-    st.markdown(
-        f"""
-        <div style="
-            margin-top: 1rem;
-            padding: 0.9rem 1rem;
-            border-left: 6px solid {border_color};
-            background: {bg_color};
-            border-radius: 0.5rem;
-            color: {text_color};
-        " title="{tooltip_text}">
-            <div style="font-weight: 700; margin-bottom: 0.25rem;">
-                {T.get("duration_block_title", "Consultation duration")}
+    if duration_days is not None:
+        bg_map = {
+            "red": "#fde8e8",
+            "orange": "#fff4d6",
+            "green": "#e6f4ea",
+        }
+        border_map = {
+            "red": "#d93025",
+            "orange": "#f9ab00",
+            "green": "#188038",
+        }
+        text_map = {
+            "red": "#8b1e1e",
+            "orange": "#8a5a00",
+            "green": "#0f5c2e",
+        }
+    
+        bg_color = bg_map.get(duration_color, "#f3f4f6")
+        border_color = border_map.get(duration_color, "#9ca3af")
+        text_color = text_map.get(duration_color, "#374151")
+    
+        duration_display = (
+            f"{int(duration_days)}"
+            if float(duration_days).is_integer()
+            else f"{duration_days:.2f}"
+        )
+    
+        tooltip_text = T.get("duration_tooltip", "").format(
+            posted=posted_raw or "-",
+            closes=closes_raw or "-",
+        )
+    
+        st.markdown(
+            f"""
+            <div style="
+                margin-top: 1rem;
+                padding: 0.9rem 1rem;
+                border-left: 6px solid {border_color};
+                background: {bg_color};
+                border-radius: 0.5rem;
+                color: {text_color};
+            " title="{tooltip_text}">
+                <div style="font-weight: 700; margin-bottom: 0.25rem;">
+                    {T.get("duration_block_title", "Consultation duration")}
+                </div>
+                <div>
+                    {T.get("duration_block_text", "This consultation remained open for {days} days.").format(days=duration_display)}
+                </div>
+                <div style="margin-top: 0.35rem; font-size: 0.95rem;">
+                    <strong>{T.get("duration_assessment_label", "Assessment")}:</strong> {duration_label}
+                </div>
             </div>
-            <div>
-                {T.get("duration_block_text", "This consultation remained open for {days} days.").format(days=duration_display)}
-            </div>
-            <div style="margin-top: 0.35rem; font-size: 0.95rem;">
-                <strong>{T.get("duration_assessment_label", "Assessment")}:</strong> {duration_label}
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+            """,
+            unsafe_allow_html=True
+        )
 
     st.caption(tooltip_text)
     
