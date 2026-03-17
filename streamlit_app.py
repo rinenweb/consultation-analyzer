@@ -550,7 +550,7 @@ if st.session_state.results and not st.session_state.running:
             unsafe_allow_html=True
         )
 
-    st.caption(tooltip_text)
+        st.caption(tooltip_text)
     
     # ---------------------------
     # EXPORTS (CSV + METADATA)
