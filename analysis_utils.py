@@ -58,7 +58,17 @@ def parse_greek_datetime(dt_text: str):
     if not dt_text:
         return None
 
-    clean = canonicalize_text(dt_text).replace(",", "")
+    clean = unicodedata.normalize("NFD", dt_text)
+    clean = "".join(
+        ch for ch in clean
+        if unicodedata.category(ch) != "Mn"
+    )
+    clean = clean.lower().strip()
+
+    # κρατάμε το ":" γιατί το χρειαζόμαστε για την ώρα
+    clean = clean.replace(",", "")
+    clean = re.sub(r"\s+", " ", clean)
+
     m = re.match(r"(\d{1,2})\s+([^\s]+)\s+(\d{4})\s+(\d{1,2}):(\d{2})", clean)
     if not m:
         return None
@@ -77,7 +87,6 @@ def parse_greek_datetime(dt_text: str):
         return datetime(year, month, day, hour, minute)
     except ValueError:
         return None
-
 
 def scrape_consultation_timing(parent_id: str, base: str, session: requests.Session, translations: dict):
     """
