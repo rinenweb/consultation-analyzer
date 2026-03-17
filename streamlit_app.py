@@ -142,7 +142,7 @@ if run_button and url_input:
 
     # ================= STEP 1: SCRAPE =================
 
-    df, chapters = scrape_consultation_with_progress(parent_id, base, T)
+    df, chapters, timing_info = scrape_consultation_with_progress(parent_id, base, T)
 
     if st.session_state.abort:
         scrape_msg.empty()
@@ -273,6 +273,7 @@ if run_button and url_input:
         "std": std,
         "template_groups": template_groups,
         "template_ids": template_ids,
+        "timing_info": timing_info,
         "timestamp": str(pd.Timestamp.now())
     }
 
@@ -485,6 +486,71 @@ if st.session_state.results and not st.session_state.running:
         ax.set_xlabel(T.get("word_count_label", "Word count"))
         ax.legend()
         st.pyplot(fig)
+
+    timing = R.get("timing_info", {}) or {}
+duration_days = timing.get("duration_days")
+duration_label = timing.get("duration_label")
+duration_color = timing.get("duration_color")
+posted_raw = timing.get("posted_raw")
+closes_raw = timing.get("closes_raw")
+
+if duration_days is not None:
+    bg_map = {
+        "red": "#fde8e8",
+        "orange": "#fff4d6",
+        "green": "#e6f4ea",
+    }
+    border_map = {
+        "red": "#d93025",
+        "orange": "#f9ab00",
+        "green": "#188038",
+    }
+    text_map = {
+        "red": "#8b1e1e",
+        "orange": "#8a5a00",
+        "green": "#0f5c2e",
+    }
+
+    bg_color = bg_map.get(duration_color, "#f3f4f6")
+    border_color = border_map.get(duration_color, "#9ca3af")
+    text_color = text_map.get(duration_color, "#374151")
+
+    duration_display = (
+        f"{int(duration_days)}"
+        if float(duration_days).is_integer()
+        else f"{duration_days:.2f}"
+    )
+
+    tooltip_text = T.get("duration_tooltip", "").format(
+        posted=posted_raw or "-",
+        closes=closes_raw or "-",
+    )
+
+    st.markdown(
+        f"""
+        <div style="
+            margin-top: 1rem;
+            padding: 0.9rem 1rem;
+            border-left: 6px solid {border_color};
+            background: {bg_color};
+            border-radius: 0.5rem;
+            color: {text_color};
+        " title="{tooltip_text}">
+            <div style="font-weight: 700; margin-bottom: 0.25rem;">
+                {T.get("duration_block_title", "Consultation duration")}
+            </div>
+            <div>
+                {T.get("duration_block_text", "This consultation remained open for {days} days.").format(days=duration_display)}
+            </div>
+            <div style="margin-top: 0.35rem; font-size: 0.95rem;">
+                <strong>{T.get("duration_assessment_label", "Assessment")}:</strong> {duration_label}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    st.caption(tooltip_text)
     
     # ---------------------------
     # EXPORTS (CSV + METADATA)
@@ -540,6 +606,14 @@ if st.session_state.results and not st.session_state.running:
         "strict_layer_pct": float(R.get("strict_layer")),
         "policy_keywords": R.get("policy_keywords"),
         "amendment_keywords": R.get("amendment_keywords"),
+        "consultation_timing": {
+            "posted_raw": timing.get("posted_raw"),
+            "closes_raw": timing.get("closes_raw"),
+            "posted_dt": timing.get("posted_dt"),
+            "closes_dt": timing.get("closes_dt"),
+            "duration_days": timing.get("duration_days"),
+            "duration_label": timing.get("duration_label"),
+        },
         "text_stats": {
             "mean_words": float(R.get("mean")),
             "median_words": float(R.get("median")),
@@ -586,6 +660,12 @@ if st.session_state.results and not st.session_state.running:
         st.write(T.get("legislative_logic_label","Legislative matching logic") + ":", R.get("legislative_logic", T["logic_and"]))
         st.write(T.get("amend","Amendment verbs") + ":", R["amendment_keywords"])
         st.write(T.get("timestamp","Run timestamp") + ":", R["timestamp"])
+        timing = R.get("timing_info", {}) or {}
+        if timing.get("duration_days") is not None:
+            st.write(
+                T.get("duration_block_title", "Consultation duration") + ":",
+                f"{timing.get('duration_days')} {T.get('days_unit', 'days')}"
+            )
 
 # =========================================================
 # FOOTER (Centered, Bilingual)
