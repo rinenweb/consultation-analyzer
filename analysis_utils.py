@@ -1,7 +1,7 @@
 import re
 import time
 import unicodedata
-
+from datetime import datetime
 import pandas as pd
 import requests
 import streamlit as st
@@ -33,6 +33,101 @@ def extract_base_and_parent(url_text: str):
 def build_comment_link(base: str, comment_id: str) -> str:
     return f"{base}?c={comment_id}"
 
+GREEK_MONTHS = {
+    "ιανουαριου": 1,
+    "φεβρουαριου": 2,
+    "μαρτιου": 3,
+    "απριλιου": 4,
+    "μαιου": 5,
+    "ιουνιου": 6,
+    "ιουλιου": 7,
+    "αυγουστου": 8,
+    "σεπτεμβριου": 9,
+    "οκτωβριου": 10,
+    "νοεμβριου": 11,
+    "δεκεμβριου": 12,
+}
+
+
+def parse_greek_datetime(dt_text: str):
+    """
+    Parses strings like:
+    '2 Μαρτίου 2026, 15:30'
+    Returns datetime or None.
+    """
+    if not dt_text:
+        return None
+
+    clean = canonicalize_text(dt_text).replace(",", "")
+    m = re.match(r"(\d{1,2})\s+([^\s]+)\s+(\d{4})\s+(\d{1,2}):(\d{2})", clean)
+    if not m:
+        return None
+
+    day = int(m.group(1))
+    month_name = m.group(2).strip()
+    year = int(m.group(3))
+    hour = int(m.group(4))
+    minute = int(m.group(5))
+
+    month = GREEK_MONTHS.get(month_name)
+    if not month:
+        return None
+
+    try:
+        return datetime(year, month, day, hour, minute)
+    except ValueError:
+        return None
+
+
+def scrape_consultation_timing(parent_id: str, base: str, session: requests.Session, translations: dict):
+    """
+    Extract posting and closing datetime from the consultation sidebar.
+    Returns dict with raw strings, parsed datetimes, duration_days, and qualitative status.
+    """
+    r = session.get(f"{base}?p={parent_id}", timeout=25)
+    soup = BeautifulSoup(r.text, "html5lib")
+
+    timing_box = soup.find("div", class_="sidespot red_spot")
+
+    posted_raw = None
+    closes_raw = None
+    posted_dt = None
+    closes_dt = None
+    duration_days = None
+    duration_label = None
+    duration_color = None
+
+    if timing_box:
+        spans = timing_box.find_all("span")
+        if len(spans) >= 2:
+            posted_raw = spans[0].get_text(" ", strip=True)
+            closes_raw = spans[1].get_text(" ", strip=True)
+
+            posted_dt = parse_greek_datetime(posted_raw)
+            closes_dt = parse_greek_datetime(closes_raw)
+
+            if posted_dt and closes_dt:
+                duration_days = round((closes_dt - posted_dt).total_seconds() / 86400, 2)
+
+                if duration_days < 14:
+                    duration_label = translations.get("duration_insufficient", "Insufficient duration")
+                    duration_color = "red"
+                elif duration_days < 21:
+                    duration_label = translations.get("duration_borderline", "Borderline duration")
+                    duration_color = "orange"
+                else:
+                    duration_label = translations.get("duration_satisfactory", "Satisfactory duration")
+                    duration_color = "green"
+
+    return {
+        "posted_raw": posted_raw,
+        "closes_raw": closes_raw,
+        "posted_dt": posted_dt.isoformat() if posted_dt else None,
+        "closes_dt": closes_dt.isoformat() if closes_dt else None,
+        "duration_days": duration_days,
+        "duration_label": duration_label,
+        "duration_color": duration_color,
+    }
 # =========================================================
 # STEP UI (NO DUPLICATION)
 # =========================================================
@@ -145,6 +240,7 @@ def scrape_consultation_with_progress(parent_id: str, base: str, translations: d
         "User-Agent": "Mozilla/5.0 (compatible; ConsultationAnalyzer/1.0)"
     })
 
+    timing_info = scrape_consultation_timing(parent_id, base, session, translations)
     chapters = get_chapters(parent_id, base, session)
     all_rows = []
 
@@ -167,7 +263,7 @@ def scrape_consultation_with_progress(parent_id: str, base: str, translations: d
     prog.empty()
     status.empty()
 
-    return pd.DataFrame(all_rows), chapters
+    return pd.DataFrame(all_rows), chapters, timing_info
 
 # =========================================================
 # DUPLICATE DETECTION (FAST FUZZY + PROGRESS)
