@@ -98,6 +98,14 @@ TRANSLATIONS = {
         "open_comment": "Open original comment",
         "of_total": "of total comments",
         "show_more": "show entire comment",
+        "duration_block_title": "Consultation duration",
+        "duration_block_text": "This consultation remained open for {days} days.",
+        "duration_assessment_label": "Assessment",
+        "duration_insufficient": "Insufficient duration",
+        "duration_borderline": "Borderline duration",
+        "duration_satisfactory": "Satisfactory duration",
+        "duration_tooltip": "Posted: {posted} | Closed to comments: {closes}. Benchmarks used by the app: under 14 days = insufficient, 14-20 days = borderline, 21+ days = satisfactory. These are heuristic benchmarks for quick interpretation, informed by the Greek 2-week baseline and broader European best-practice discussions.",
+        "days_unit": "days",
 
         # --- Export buttons ---
         "export_comments_csv": "Export comments (CSV)",
@@ -249,6 +257,14 @@ TRANSLATIONS = {
         "open_comment": "Άνοιγμα πρωτότυπου σχολίου",
         "of_total": "του συνόλου των σχολίων",
         "show_more": "εμφάνιση ολόκληρου του σχολίου",
+        "duration_block_title": "Διάρκεια διαβούλευσης",
+        "duration_block_text": "Η διαβούλευση αυτή παρέμεινε ανοικτή για {days} ημέρες.",
+        "duration_assessment_label": "Αξιολόγηση",
+        "duration_insufficient": "Ανεπαρκής διάρκεια",
+        "duration_borderline": "Οριακή διάρκεια",
+        "duration_satisfactory": "Ικανοποιητική διάρκεια",
+        "duration_tooltip": "Αναρτήθηκε: {posted} | Ανοικτή σε σχόλια έως: {closes}. Benchmarks που χρησιμοποιεί η εφαρμογή: κάτω από 14 ημέρες = ανεπαρκής, 14-20 ημέρες = οριακή, 21+ ημέρες = ικανοποιητική. Πρόκειται για ενδεικτικά thresholds γρήγορης ερμηνείας, με βάση το ελληνικό 14ήμερο σημείο αναφοράς και ευρύτερες ευρωπαϊκές best practices.",
+        "days_unit": "ημέρες",
 
         # --- Export buttons ---
         "export_comments_csv": "Εξαγωγή σχολίων (CSV)",
