@@ -666,6 +666,7 @@ if st.session_state.results and not st.session_state.running:
                 T.get("duration_block_title", "Consultation duration") + ":",
                 f"{timing.get('duration_days')} {T.get('days_unit', 'days')}"
             )
+        st.write("Timing info debug:", R.get("timing_info"))
 
 # =========================================================
 # FOOTER (Centered, Bilingual)
