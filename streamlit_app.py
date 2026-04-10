@@ -593,33 +593,42 @@ if st.session_state.results and not st.session_state.running:
 
 
     top_templates_metadata = []
-
-    if R.get("duplicate_templates", 0) > 0:
-        if isinstance(R["template_groups"], pd.Series):
-            top = R["template_groups"].sort_values(ascending=False).head(10)
-            items = list(top.items())
+    
+    if isinstance(R.get("template_groups"), pd.Series):
+        sorted_template_groups = R["template_groups"].sort_values(ascending=False)
+        items = list(sorted_template_groups.head(10).items())
+        all_template_counts = [int(v) for v in sorted_template_groups.tolist()]
+    else:
+        raw_items = list(R.get("template_groups", {}).items())
+        raw_items = sorted(raw_items, key=lambda x: x[1], reverse=True)
+        items = raw_items[:10]
+        all_template_counts = [int(v) for _, v in raw_items]
+    
+    for idx, (key, count) in enumerate(items, start=1):
+        count_int = int(count)
+        share_pct = round((count_int / len(df)) * 100, 2)
+    
+        if R["duplicate_method"] == T["exact_match"]:
+            full_text = str(key)
+            ids = R["template_ids"].get(key, [])
         else:
-            items = list(R["template_groups"].items())[:10]
+            rep_idx = int(key)
+            full_text = str(df.loc[rep_idx, "text"])
+            ids = R["template_ids"].get(rep_idx, [])
     
-        for idx, (key, count) in enumerate(items, start=1):
-            count_int = int(count)
-            share_pct = round((count_int / len(df)) * 100, 2)
+        top_templates_metadata.append({
+            "template_id": idx,
+            "count": count_int,
+            "share_pct": share_pct,
+            "comment_ids": [str(x) for x in ids if str(x).strip()],
+            "template_text_preview": full_text[:300]
+        })
     
-            if R["duplicate_method"] == T["exact_match"]:
-                full_text = str(key)
-                ids = R["template_ids"].get(key, [])
-            else:
-                rep_idx = int(key)
-                full_text = str(df.loc[rep_idx, "text"])
-                ids = R["template_ids"].get(rep_idx, [])
-    
-            top_templates_metadata.append({
-                "template_id": idx,
-                "count": count_int,
-                "share_pct": share_pct,
-                "comment_ids": [str(x) for x in ids if str(x).strip()],
-                "template_text_preview": full_text[:300]
-            })
+    duplicate_cluster_count = int(len(all_template_counts))
+    singleton_count = int((df.get("dup_size", 1) == 1).sum())
+    unique_comments_count = singleton_count + duplicate_cluster_count
+    unique_share_pct = round((unique_comments_count / len(df)) * 100, 2) if len(df) > 0 else 0.0
+    comments_in_top_5_templates_pct = round((sum(all_template_counts[:5]) / len(df)) * 100, 2) if len(df) > 0 else 0.0
         
     # 2) Metadata JSON export (reproducibility)
     metadata = {
@@ -634,6 +643,9 @@ if st.session_state.results and not st.session_state.running:
         "duplicate_templates": int(R.get("duplicate_templates")),
         "top_templates_count": int(len(top_templates_metadata)),
         "top_templates": top_templates_metadata,
+        "unique_comments_count": int(unique_comments_count),
+        "unique_share_pct": float(unique_share_pct),
+        "comments_in_top_5_templates_pct": float(comments_in_top_5_templates_pct),
         "legislative_logic": R.get("legislative_logic"),
         "strict_layer_pct": float(R.get("strict_layer")),
         "policy_keywords": R.get("policy_keywords"),
