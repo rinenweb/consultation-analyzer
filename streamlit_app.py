@@ -590,7 +590,37 @@ if st.session_state.results and not st.session_state.running:
             file_name=f"comments_{R.get('parent_id','consultation')}.csv",
             mime="text/csv"
         )
+
+
+    top_templates_metadata = []
+
+    if R.get("duplicate_templates", 0) > 0:
+        if isinstance(R["template_groups"], pd.Series):
+            top = R["template_groups"].sort_values(ascending=False).head(10)
+            items = list(top.items())
+        else:
+            items = list(R["template_groups"].items())[:10]
     
+        for idx, (key, count) in enumerate(items, start=1):
+            count_int = int(count)
+            share_pct = round((count_int / len(df)) * 100, 2)
+    
+            if R["duplicate_method"] == T["exact_match"]:
+                full_text = str(key)
+                ids = R["template_ids"].get(key, [])
+            else:
+                rep_idx = int(key)
+                full_text = str(df.loc[rep_idx, "text"])
+                ids = R["template_ids"].get(rep_idx, [])
+    
+            top_templates_metadata.append({
+                "template_id": idx,
+                "count": count_int,
+                "share_pct": share_pct,
+                "comment_ids": [str(x) for x in ids if str(x).strip()],
+                "template_text_preview": full_text[:300]
+            })
+        
     # 2) Metadata JSON export (reproducibility)
     metadata = {
         "base": R.get("base"),
@@ -602,6 +632,8 @@ if st.session_state.results and not st.session_state.running:
         "similarity_threshold": R.get("similarity_threshold"),
         "campaign_share_pct": float(R.get("campaign_share")),
         "duplicate_templates": int(R.get("duplicate_templates")),
+        "top_templates_count": int(len(top_templates_metadata)),
+        "top_templates": top_templates_metadata,
         "legislative_logic": R.get("legislative_logic"),
         "strict_layer_pct": float(R.get("strict_layer")),
         "policy_keywords": R.get("policy_keywords"),
