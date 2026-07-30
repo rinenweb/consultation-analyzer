@@ -10,6 +10,28 @@ TRANSLATIONS = {
         "input_label": "Enter consultation URL",
         "run": "Run Analysis",
 
+        # --- Source selection ---
+        "source_mode_label": "Which opengov.gr system?",
+        "source_mode_legacy": "Old opengov.gr",
+        "source_mode_new": "New opengov.gr",
+        "archive_notice": (
+            "Old consultations now live at archive.opengov.gr. If your link "
+            "redirected you there, you can paste that archive.opengov.gr link directly."
+        ),
+
+        # --- New platform search ---
+        "new_search_org_label": "Organization",
+        "new_search_org_all": "All organizations",
+        "new_search_query_label": "Search term (leave empty to browse all)",
+        "new_search_button": "Search",
+        "new_search_no_results": "No consultations found.",
+        "new_search_select_button": "Select",
+        "new_search_selected_label": "Selected consultation:",
+        "new_search_need_selection": "Please search and select a consultation first.",
+        "status_open": "Open",
+        "status_closed": "Closed",
+        "status_pending": "Pending",
+
         # --- Advanced ---
         "advanced": "Advanced Settings",
         "policy": "Policy keywords (comma separated)",
@@ -118,6 +140,16 @@ TRANSLATIONS = {
         "median_line": "Median",
         "word_count_label": "Word count",
 
+        # --- Most commented chapters ---
+        "most_commented_title": "Most Commented Chapters / Articles",
+        "most_commented_count_label": "Comments",
+
+        # --- Comment timeline ---
+        "comment_timeline_title": "Comment Submission Timeline",
+        "comment_timeline_count_label": "Comments",
+        "comment_timeline_posted_line": "Posted",
+        "comment_timeline_closes_line": "Deadline",
+
         # --- Templates ---
         "top_templates": "Top Duplicate Templates",
         "occurrences": "Occurrences",
@@ -166,6 +198,29 @@ TRANSLATIONS = {
         # --- Input ---
         "input_label": "Εισάγετε URL διαβούλευσης από το opengov.gr",
         "run": "Εκτέλεση Ανάλυσης",
+
+        # --- Επιλογή συστήματος ---
+        "source_mode_label": "Ποιο σύστημα opengov.gr;",
+        "source_mode_legacy": "Παλιό opengov.gr",
+        "source_mode_new": "Νέο opengov.gr",
+        "archive_notice": (
+            "Οι παλιές διαβουλεύσεις βρίσκονται πλέον στο archive.opengov.gr. "
+            "Αν το link σας ανακατεύθυνε εκεί, μπορείτε να επικολλήσετε "
+            "κανονικά το archive.opengov.gr link."
+        ),
+
+        # --- Αναζήτηση στη νέα πλατφόρμα ---
+        "new_search_org_label": "Φορέας",
+        "new_search_org_all": "Όλοι οι φορείς",
+        "new_search_query_label": "Όρος αναζήτησης (αφήστε κενό για όλες τις διαβουλεύσεις)",
+        "new_search_button": "Αναζήτηση",
+        "new_search_no_results": "Δεν βρέθηκαν διαβουλεύσεις.",
+        "new_search_select_button": "Επιλογή",
+        "new_search_selected_label": "Επιλεγμένη διαβούλευση:",
+        "new_search_need_selection": "Κάντε πρώτα αναζήτηση και επιλέξτε μια διαβούλευση.",
+        "status_open": "Ανοιχτή",
+        "status_closed": "Κλειστή",
+        "status_pending": "Σε εξέλιξη",
 
         # --- Advanced ---
         "advanced": "Προχωρημένες Ρυθμίσεις",
@@ -276,6 +331,16 @@ TRANSLATIONS = {
         "mean_line": "Μέσος Όρος",
         "median_line": "Διάμεσος",
         "word_count_label": "Αριθμός λέξεων",
+
+        # --- Πιο σχολιασμένα κεφάλαια ---
+        "most_commented_title": "Πιο Σχολιασμένα Κεφάλαια / Άρθρα",
+        "most_commented_count_label": "Σχόλια",
+
+        # --- Χρονική κατανομή σχολίων ---
+        "comment_timeline_title": "Χρονική Κατανομή Σχολίων",
+        "comment_timeline_count_label": "Σχόλια",
+        "comment_timeline_posted_line": "Ανάρτηση",
+        "comment_timeline_closes_line": "Λήξη",
 
         # --- Templates ---
         "top_templates": "Κορυφαία Επαναλαμβανόμενα Templates",

@@ -13,25 +13,54 @@ def extract_base_and_parent(url_text: str):
     """
     Accepts full URL like:
     https://www.opengov.gr/immigration/?p=2000
+    or, for closed/archived consultations:
+    https://archive.opengov.gr/immigration/?p=2000
     Returns:
-      BASE = https://www.opengov.gr/immigration/
+      BASE = https://www.opengov.gr/immigration/ (or https://archive.opengov.gr/immigration/)
       parent_id = 2000
     """
     if not url_text:
         return None, None
 
-    m = re.search(r"^https?://www\.opengov\.gr/([^/]+)/\?p=(\d+)", url_text.strip())
+    m = re.search(r"^https?://(www|archive)\.opengov\.gr/([^/]+)/\?p=(\d+)", url_text.strip())
     if not m:
         return None, None
 
-    ministry = m.group(1)
-    parent_id = m.group(2)
-    base = f"https://www.opengov.gr/{ministry}/"
+    subdomain = m.group(1)
+    ministry = m.group(2)
+    parent_id = m.group(3)
+    base = f"https://{subdomain}.opengov.gr/{ministry}/"
     return base, parent_id
 
 
 def build_comment_link(base: str, comment_id: str) -> str:
     return f"{base}?c={comment_id}"
+
+
+def get_comment_url(comment_id: str, base: str, comment_url: str = None) -> str:
+    """
+    New-platform comments already carry their own comment_url from the API.
+    Legacy comments fall back to the old ?c=ID link pattern.
+    """
+    if comment_url:
+        return comment_url
+    return build_comment_link(base, comment_id)
+
+
+def classify_duration(duration_days, translations: dict):
+    """
+    Shared thresholds for consultation-duration quality, used by both the
+    legacy scraper and the new-platform API client.
+    """
+    if duration_days is None:
+        return None, None
+
+    if duration_days < 14:
+        return translations.get("duration_insufficient", "Insufficient duration"), "red"
+    elif duration_days < 21:
+        return translations.get("duration_borderline", "Borderline duration"), "orange"
+    else:
+        return translations.get("duration_satisfactory", "Satisfactory duration"), "green"
 
 GREEK_MONTHS = {
     "ιανουαριου": 1,
@@ -130,16 +159,7 @@ def scrape_consultation_timing(parent_id: str, base: str, session: requests.Sess
 
     if posted_dt and closes_dt:
         duration_days = round((closes_dt - posted_dt).total_seconds() / 86400, 2)
-
-        if duration_days < 14:
-            duration_label = translations.get("duration_insufficient", "Insufficient duration")
-            duration_color = "red"
-        elif duration_days < 21:
-            duration_label = translations.get("duration_borderline", "Borderline duration")
-            duration_color = "orange"
-        else:
-            duration_label = translations.get("duration_satisfactory", "Satisfactory duration")
-            duration_color = "green"
+        duration_label, duration_color = classify_duration(duration_days, translations)
 
     return {
         "posted_raw": posted_raw,
