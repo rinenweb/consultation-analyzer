@@ -35,6 +35,14 @@ def test_extract_base_and_parent_archive():
     assert parent_id == "3832"
 
 
+def test_extract_base_and_parent_bare_domain():
+    # bare opengov.gr (no www/archive subdomain) also 301-redirects to archive.opengov.gr,
+    # so it must be accepted just like the www/archive forms.
+    base, parent_id = extract_base_and_parent("https://opengov.gr/digitalandbrief/?p=3832")
+    assert base == "https://opengov.gr/digitalandbrief/"
+    assert parent_id == "3832"
+
+
 @pytest.mark.parametrize("url", [
     "",
     None,

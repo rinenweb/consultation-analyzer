@@ -13,23 +13,25 @@ def extract_base_and_parent(url_text: str):
     """
     Accepts full URL like:
     https://www.opengov.gr/immigration/?p=2000
+    https://opengov.gr/immigration/?p=2000 (bare domain also redirects to archive)
     or, for closed/archived consultations:
     https://archive.opengov.gr/immigration/?p=2000
     Returns:
-      BASE = https://www.opengov.gr/immigration/ (or https://archive.opengov.gr/immigration/)
+      BASE = https://www.opengov.gr/immigration/ (same subdomain as given)
       parent_id = 2000
     """
     if not url_text:
         return None, None
 
-    m = re.search(r"^https?://(www|archive)\.opengov\.gr/([^/]+)/\?p=(\d+)", url_text.strip())
+    m = re.search(r"^https?://(?:(www|archive)\.)?opengov\.gr/([^/]+)/\?p=(\d+)", url_text.strip())
     if not m:
         return None, None
 
     subdomain = m.group(1)
     ministry = m.group(2)
     parent_id = m.group(3)
-    base = f"https://{subdomain}.opengov.gr/{ministry}/"
+    prefix = f"{subdomain}." if subdomain else ""
+    base = f"https://{prefix}opengov.gr/{ministry}/"
     return base, parent_id
 
 
