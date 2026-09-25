@@ -8,12 +8,17 @@ import streamlit as st
 from scipy.stats import gaussian_kde
 
 from analysis_utils import (
-    build_comment_link,
     canonicalize_text,
     extract_base_and_parent,
+    get_comment_url,
     optimized_fuzzy_groups,
     render_steps,
     scrape_consultation_with_progress,
+)
+from new_opengov_api import (
+    fetch_new_consultation_with_progress,
+    list_organizations,
+    search_deliberations,
 )
 from translations import TRANSLATIONS
 
@@ -31,6 +36,12 @@ if "results" not in st.session_state:
 
 if "running" not in st.session_state:
     st.session_state.running = False
+
+if "selected_new_post" not in st.session_state:
+    st.session_state.selected_new_post = None
+
+if "new_search_results" not in st.session_state:
+    st.session_state.new_search_results = None
 
 # =========================================================
 # LANGUAGE (FLAGS)
@@ -54,7 +65,61 @@ st.markdown(T["subtitle"])
 # INPUT + ADVANCED
 # =========================================================
 
-url_input = st.text_input(T["input_label"])
+source_mode = st.radio(
+    T["source_mode_label"],
+    [T["source_mode_legacy"], T["source_mode_new"]],
+    horizontal=True,
+)
+is_new_mode = (source_mode == T["source_mode_new"])
+
+url_input = ""
+
+if is_new_mode:
+    orgs = sorted(list_organizations(), key=lambda o: o["name"])
+    org_options = [T["new_search_org_all"]] + [o["name"] for o in orgs]
+    org_name_to_id = {o["name"]: o["site_id"] for o in orgs}
+
+    col_org, col_query = st.columns([1, 2])
+    with col_org:
+        selected_org_name = st.selectbox(T["new_search_org_label"], org_options)
+    with col_query:
+        search_query = st.text_input(T["new_search_query_label"])
+
+    if st.button(T["new_search_button"]):
+        site_id = org_name_to_id.get(selected_org_name)
+        st.session_state.new_search_results = search_deliberations(search_query, site_id=site_id)
+        st.session_state.selected_new_post = None
+
+    results = st.session_state.new_search_results
+    status_labels = {
+        "open": T["status_open"],
+        "closed": T["status_closed"],
+        "pending": T["status_pending"],
+    }
+
+    if results is not None and not results:
+        st.info(T["new_search_no_results"])
+    elif results:
+        for item in results:
+            statuses = item.get("status") or []
+            status_text = ", ".join(status_labels.get(s, s) for s in statuses)
+            col_info, col_btn = st.columns([5, 1])
+            with col_info:
+                st.markdown(f"**{item.get('title', '')}**  \n{item.get('site_name', '')} — {status_text}")
+            with col_btn:
+                if st.button(T["new_search_select_button"], key=f"select_new_post_{item.get('id')}"):
+                    st.session_state.selected_new_post = {
+                        "post_id": item.get("id"),
+                        "site_id": item.get("site_id"),
+                        "title": item.get("title"),
+                    }
+            st.markdown("---")
+
+    if st.session_state.selected_new_post:
+        st.success(f"{T['new_search_selected_label']} {st.session_state.selected_new_post['title']}")
+else:
+    url_input = st.text_input(T["input_label"])
+    st.caption(T["archive_notice"])
 
 with st.expander(T["advanced"]):
     policy_keywords_input = st.text_area(
@@ -99,17 +164,33 @@ run_button = st.button(T["run"])
 # RUN
 # =========================================================
 
-if run_button and url_input:
+if run_button and is_new_mode and not st.session_state.selected_new_post:
+    st.warning(T.get("new_search_need_selection", "Please search and select a consultation first."))
+
+should_run = run_button and (
+    (is_new_mode and st.session_state.selected_new_post)
+    or (not is_new_mode and url_input)
+)
+
+if should_run:
 
     st.session_state.abort = False
     st.session_state.running = True
     st.session_state.results = None
 
-    base, parent_id = extract_base_and_parent(url_input)
-    if not base:
-        st.error(T.get("invalid_url", "Please provide a valid full opengov consultation URL."))
-        st.session_state.running = False
-        st.stop()
+    if is_new_mode:
+        source = "new"
+        selected = st.session_state.selected_new_post
+        site_id = selected["site_id"]
+        base = None
+        parent_id = str(selected["post_id"])
+    else:
+        source = "legacy"
+        base, parent_id = extract_base_and_parent(url_input)
+        if not base:
+            st.error(T.get("invalid_url", "Please provide a valid full opengov consultation URL."))
+            st.session_state.running = False
+            st.stop()
 
     # --- Abort button (visible ONLY while running)
     if st.session_state.running:
@@ -142,7 +223,10 @@ if run_button and url_input:
 
     # ================= STEP 1: SCRAPE =================
 
-    df, chapters, timing_info = scrape_consultation_with_progress(parent_id, base, T)
+    if source == "new":
+        df, chapters, timing_info = fetch_new_consultation_with_progress(selected["post_id"], site_id, T)
+    else:
+        df, chapters, timing_info = scrape_consultation_with_progress(parent_id, base, T)
 
     if st.session_state.abort:
         scrape_msg.empty()
@@ -257,6 +341,7 @@ if run_button and url_input:
     st.session_state.results = {
         "df": df,
         "chapters": chapters,
+        "source": source,
         "base": base,
         "parent_id": parent_id,
         "duplicate_method": duplicate_method,
@@ -299,6 +384,10 @@ if st.session_state.results and not st.session_state.running:
     df = R["df"]
     base = R["base"]
 
+    comment_url_lookup = {}
+    if "comment_url" in df.columns:
+        comment_url_lookup = dict(zip(df["comment_id"].astype(str), df["comment_url"]))
+
     chapters_df = pd.DataFrame(R.get("chapters", []))
 
     chapter_title_map = {}
@@ -332,8 +421,9 @@ if st.session_state.results and not st.session_state.running:
     
         targeted_df["chapter_title"] = targeted_df["chapter_p"].map(chapter_title_map).fillna("")
         
-        targeted_df["comment_url"] = targeted_df["comment_id"].astype(str).apply(
-            lambda cid: build_comment_link(base, cid)
+        targeted_df["comment_url"] = targeted_df.apply(
+            lambda row: get_comment_url(row["comment_id"], base, row.get("comment_url")),
+            axis=1
         )
     
         targeted_df = targeted_df.sort_values(
@@ -421,7 +511,10 @@ if st.session_state.results and not st.session_state.running:
                 more = len(ids) - len(to_show)
                 
                 if to_show:
-                    links = [f"[{cid}]({build_comment_link(base, cid)})" for cid in to_show]
+                    links = [
+                        f"[{cid}]({get_comment_url(cid, base, comment_url_lookup.get(cid))})"
+                        for cid in to_show
+                    ]
                     st.markdown(" ".join(links))
                     if more > 0:
                         st.caption(f"+{more} more")
@@ -486,6 +579,52 @@ if st.session_state.results and not st.session_state.running:
         ax.set_xlabel(T.get("word_count_label", "Word count"))
         ax.legend()
         st.pyplot(fig)
+
+    # --- MOST COMMENTED CHAPTERS/ARTICLES ---
+    if chapter_title_map and df["chapter_p"].nunique() > 1:
+        st.subheader(T.get("most_commented_title", "Most Commented Chapters / Articles"))
+
+        chapter_counts = df.groupby("chapter_p").size().sort_values(ascending=False).head(10)
+        labels = [str(chapter_title_map.get(pid, pid))[:60] for pid in chapter_counts.index]
+
+        fig_ch, ax_ch = plt.subplots(figsize=(10, max(3, 0.4 * len(chapter_counts))))
+        ax_ch.barh(labels[::-1], chapter_counts.values[::-1])
+        ax_ch.set_xlabel(T.get("most_commented_count_label", "Comments"))
+        st.pyplot(fig_ch)
+
+    # --- COMMENT SUBMISSION TIMELINE (new platform only: needs per-comment dates) ---
+    if "comment_date" in df.columns and df["comment_date"].notna().any():
+        st.subheader(T.get("comment_timeline_title", "Comment Submission Timeline"))
+
+        comment_dates = pd.to_datetime(df["comment_date"]).dt.normalize()
+        tl_timing = R.get("timing_info", {}) or {}
+        posted_dt = pd.to_datetime(tl_timing.get("posted_dt")) if tl_timing.get("posted_dt") else None
+        closes_dt = pd.to_datetime(tl_timing.get("closes_dt")) if tl_timing.get("closes_dt") else None
+
+        range_start = min(d for d in [comment_dates.min(), posted_dt] if d is not None)
+        range_end = max(d for d in [comment_dates.max(), closes_dt] if d is not None)
+        full_range = pd.date_range(range_start.normalize(), range_end.normalize(), freq="D")
+
+        daily_counts = comment_dates.value_counts().reindex(full_range, fill_value=0).sort_index()
+        date_labels = [d.strftime("%Y-%m-%d") for d in daily_counts.index]
+
+        fig_tl, ax_tl = plt.subplots(figsize=(10, 4))
+        ax_tl.bar(date_labels, daily_counts.values)
+
+        if posted_dt is not None:
+            ax_tl.axvline(posted_dt.strftime("%Y-%m-%d"), linestyle="--", label=T.get("comment_timeline_posted_line", "Posted"))
+        if closes_dt is not None:
+            ax_tl.axvline(closes_dt.strftime("%Y-%m-%d"), linestyle=":", label=T.get("comment_timeline_closes_line", "Deadline"))
+
+        ax_tl.set_ylabel(T.get("comment_timeline_count_label", "Comments"))
+        n_labels = len(date_labels)
+        tick_step = max(1, n_labels // 15)
+        tick_positions = list(range(0, n_labels, tick_step))
+        ax_tl.set_xticks(tick_positions)
+        ax_tl.set_xticklabels([date_labels[i] for i in tick_positions], rotation=45, ha="right")
+        if posted_dt is not None or closes_dt is not None:
+            ax_tl.legend()
+        st.pyplot(fig_tl)
 
     timing = R.get("timing_info", {}) or {}
     duration_days = timing.get("duration_days")
@@ -695,7 +834,9 @@ if st.session_state.results and not st.session_state.running:
             st.dataframe(merged, use_container_width=True)
 
         st.markdown(f"### {T.get('active_configuration','Active Configuration')}")
-        st.write("BASE:", R["base"])
+        st.write("Source:", R.get("source", "legacy"))
+        if R.get("base"):
+            st.write("BASE:", R["base"])
         st.write("Parent ID:", R["parent_id"])
         st.write(T.get("duplicate_method_label","Duplicate detection method") + ":", R["duplicate_method"])
         if R["duplicate_method"] == T["fuzzy_match"]:
